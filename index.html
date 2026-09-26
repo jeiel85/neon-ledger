@@ -1,0 +1,2929 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neon Ledger: Underground Fund</title>
+<meta name="description" content="2087 네오시티를 배경으로 한 완전 허구의 사이버펑크 트레이딩 시뮬레이션 게임">
+<style>
+:root {
+  --bg: #07060d;
+  --bg2: #0b0917;
+  --panel: #0f0c1d;
+  --panel2: #161230;
+  --line: #2a2452;
+  --line2: #3b3375;
+  --text: #e8e5ff;
+  --muted: #8e87bd;
+  --cyan: #00f0ff;
+  --magenta: #ff2bd6;
+  --yellow: #f7ff4a;
+  --green: #19ff9c;
+  --red: #ff3b6b;
+  --orange: #ff9f1c;
+  --violet: #9d6bff;
+  --font: "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --mono: "Cascadia Mono", Consolas, "SFMono-Regular", Menlo, "D2Coding", monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(255,43,214,.10), transparent 60%),
+    radial-gradient(900px 500px at 110% 10%, rgba(0,240,255,.08), transparent 60%),
+    var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.45;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+body::after {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 1;
+  background: repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 3px);
+}
+button, input, select { font: inherit; color: inherit; }
+.mono, .num { font-family: var(--mono); }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+.up { color: var(--green); }
+.down { color: var(--red); }
+.flat { color: var(--muted); }
+[hidden] { display: none !important; }
+
+/* ---------- Top bar ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px;
+  padding: 10px 16px;
+  background: linear-gradient(180deg, rgba(15,12,29,.97), rgba(11,9,23,.94));
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 0 24px rgba(255,43,214,.12);
+}
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.logo-glyph {
+  font-size: 28px; color: var(--magenta);
+  text-shadow: 0 0 10px var(--magenta), 0 0 22px rgba(255,43,214,.6);
+}
+.brand h1 {
+  margin: 0; font-size: 18px; letter-spacing: .18em; font-family: var(--mono);
+  color: var(--cyan); text-shadow: 0 0 8px rgba(0,240,255,.7);
+}
+.brand small { color: var(--muted); font-size: 11px; letter-spacing: .06em; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 1 520px; }
+.stat {
+  background: var(--panel2); border: 1px solid var(--line); border-radius: 8px;
+  padding: 4px 10px; min-width: 92px;
+}
+.stat label { display: block; font-size: 10px; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; }
+.stat b { font-family: var(--mono); font-size: 15px; }
+.stat.heat { min-width: 170px; cursor: pointer; }
+.daybar, .heatbar { height: 5px; background: #1e1a3a; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+.daybar i, .heatbar i { display: block; height: 100%; width: 0; transition: width .4s ease; }
+.daybar i { background: linear-gradient(90deg, var(--cyan), var(--violet)); }
+.heatbar { height: 8px; }
+.heatbar i { background: linear-gradient(90deg, var(--yellow), var(--orange), var(--red)); }
+.stat.heat.hot { border-color: var(--red); animation: heatPulse 1s infinite alternate; }
+@keyframes heatPulse { from { box-shadow: 0 0 0 rgba(255,59,107,0); } to { box-shadow: 0 0 16px rgba(255,59,107,.6); } }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.seg { display: inline-flex; border: 1px solid var(--line2); border-radius: 8px; overflow: hidden; }
+.seg button { background: transparent; border: 0; padding: 5px 9px; cursor: pointer; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.seg button.active { background: var(--cyan); color: #001014; font-weight: 700; }
+.vol { display: inline-flex; align-items: center; gap: 6px; }
+.vol input { width: 84px; accent-color: var(--magenta); }
+.save-ind { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.save-ind.ok::before { content: "● "; color: var(--green); }
+.save-ind.fail { color: var(--red); }
+.save-ind.fail::before { content: "▲ "; }
+
+/* ---------- Tabs ---------- */
+.tabs {
+  display: flex; gap: 4px; padding: 8px 16px 0; overflow-x: auto; scrollbar-width: thin;
+  border-bottom: 1px solid var(--line); position: relative; z-index: 2;
+}
+.tab-btn {
+  flex: 0 0 auto; background: transparent; border: 1px solid transparent; border-bottom: 0;
+  padding: 8px 14px; border-radius: 8px 8px 0 0; cursor: pointer; color: var(--muted);
+  font-weight: 600; letter-spacing: .02em; white-space: nowrap;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active {
+  color: var(--cyan); background: var(--panel); border-color: var(--line);
+  box-shadow: inset 0 2px 0 var(--cyan);
+}
+.tab-btn .badge { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 9px; background: var(--magenta); color: #fff; font-size: 11px; }
+
+/* ---------- Layout ---------- */
+.layout {
+  display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 14px;
+  padding: 14px 16px 32px; position: relative; z-index: 2;
+}
+main { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.tab-panel { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.panel {
+  background: linear-gradient(180deg, var(--panel), var(--bg2));
+  border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-width: 0;
+  box-shadow: 0 0 0 1px rgba(0,240,255,.03), 0 8px 24px rgba(0,0,0,.35);
+}
+.panel-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; margin-bottom: 10px; }
+.panel h2, .panel h3 { margin: 0; font-size: 14px; letter-spacing: .12em; font-family: var(--mono); color: var(--cyan); }
+.panel h3 { font-size: 13px; color: var(--magenta); }
+.tag { font-family: var(--mono); font-size: 11px; padding: 1px 7px; border-radius: 4px; border: 1px solid var(--line2); color: var(--muted); }
+.market-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.trade-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr); gap: 14px; align-items: start; }
+.chart-slot { min-width: 0; }
+
+/* ---------- Tables ---------- */
+.table-wrap { overflow-x: auto; }
+.ctable { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ctable th {
+  text-align: left; font-weight: 600; font-size: 11px; letter-spacing: .08em; color: var(--muted);
+  padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; text-transform: uppercase;
+}
+.ctable td { padding: 6px 8px; border-bottom: 1px solid rgba(42,36,82,.55); white-space: nowrap; }
+.ctable th.num, .ctable td.num { text-align: right; }
+.ctable tbody tr { transition: background .15s; }
+.ctable tbody tr.clickable { cursor: pointer; }
+.ctable tbody tr.clickable:hover { background: rgba(0,240,255,.05); }
+.ctable tbody tr.selected { background: rgba(255,43,214,.10); box-shadow: inset 3px 0 0 var(--magenta); }
+.ctable tbody tr.flash-up { animation: flashUp .6s; }
+.ctable tbody tr.flash-down { animation: flashDown .6s; }
+@keyframes flashUp { from { background: rgba(25,255,156,.18); } }
+@keyframes flashDown { from { background: rgba(255,59,107,.18); } }
+.co-cell { display: flex; align-items: center; gap: 8px; }
+.co-logo {
+  width: 30px; height: 30px; flex: 0 0 30px; display: grid; place-items: center; font-size: 17px;
+  border-radius: 8px; background: var(--panel2); border: 1px solid var(--line2);
+}
+.co-name b { font-family: var(--mono); color: var(--text); }
+.co-name small { display: block; color: var(--muted); font-size: 11px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+.sector-pill { font-size: 10px; padding: 0 6px; border-radius: 8px; border: 1px solid var(--line2); color: var(--violet); margin-left: 4px; }
+.empty { color: var(--muted); text-align: center; padding: 14px 0 6px; margin: 0; font-size: 13px; }
+
+/* ---------- Buttons & forms ---------- */
+.btn {
+  background: var(--panel2); border: 1px solid var(--line2); color: var(--text);
+  padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; letter-spacing: .02em;
+  transition: transform .06s, box-shadow .15s, border-color .15s, opacity .15s;
+}
+.btn:hover:not(:disabled) { border-color: var(--cyan); box-shadow: 0 0 12px rgba(0,240,255,.35); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-primary { background: linear-gradient(90deg, rgba(0,240,255,.25), rgba(157,107,255,.25)); border-color: var(--cyan); }
+.btn-danger { border-color: var(--red); color: #ffd6df; background: rgba(255,59,107,.12); }
+.btn-long { background: rgba(25,255,156,.12); border-color: var(--green); color: var(--green); }
+.btn-short { background: rgba(255,59,107,.12); border-color: var(--red); color: var(--red); }
+.btn-long:hover:not(:disabled) { box-shadow: 0 0 14px rgba(25,255,156,.45); border-color: var(--green); }
+.btn-short:hover:not(:disabled) { box-shadow: 0 0 14px rgba(255,59,107,.45); border-color: var(--red); }
+.btn-magenta { border-color: var(--magenta); color: #ffd1f6; background: rgba(255,43,214,.14); }
+.btn-magenta:hover:not(:disabled) { box-shadow: 0 0 14px rgba(255,43,214,.5); border-color: var(--magenta); }
+.chip {
+  background: transparent; border: 1px solid var(--line2); border-radius: 14px; padding: 3px 10px;
+  font-family: var(--mono); font-size: 12px; cursor: pointer; color: var(--muted);
+}
+.chip:hover { color: var(--cyan); border-color: var(--cyan); }
+.field { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
+.field > span { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
+.field input[type=number], .field select {
+  background: #0a0816; border: 1px solid var(--line2); border-radius: 8px; padding: 7px 10px;
+  font-family: var(--mono); width: 100%; min-width: 0;
+}
+.field input:focus, .field select:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(0,240,255,.2); }
+.field input[type=range] { accent-color: var(--magenta); width: 100%; }
+.lev-ticks { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: -4px; }
+.quick-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.kv { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; font-size: 13px; }
+.kv > span { color: var(--muted); }
+.kv > b { font-family: var(--mono); font-weight: 600; text-align: right; }
+.preview { margin: 10px 0; padding: 8px 10px; border: 1px dashed var(--line2); border-radius: 8px; background: rgba(0,0,0,.2); }
+.order-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.order-actions .btn { padding: 11px 8px; }
+.pos-box { margin-top: 12px; padding: 10px; border-radius: 8px; border: 1px solid var(--line2); background: rgba(157,107,255,.06); }
+.pos-box .btns { display: flex; gap: 6px; margin-top: 8px; }
+.radio-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.radio-row label {
+  flex: 1 1 0; text-align: center; border: 1px solid var(--line2); border-radius: 8px; padding: 6px 4px;
+  cursor: pointer; font-size: 12px; min-width: 80px;
+}
+.radio-row input { position: absolute; opacity: 0; pointer-events: none; }
+.radio-row label:has(input:checked) { border-color: var(--magenta); color: var(--magenta); background: rgba(255,43,214,.10); }
+.radio-row label:has(input:focus-visible) { box-shadow: 0 0 0 2px rgba(255,43,214,.4); }
+
+/* ---------- Chart ---------- */
+.chart-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ch-id { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ch-logo { font-size: 26px; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 10px; background: var(--panel2); border: 1px solid var(--magenta); box-shadow: 0 0 12px rgba(255,43,214,.3); }
+.ch-id b { font-family: var(--mono); font-size: 18px; color: var(--cyan); }
+.ch-price { text-align: right; font-family: var(--mono); }
+.ch-price b { display: block; font-size: 22px; }
+.ch-stats { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 8px 0; color: var(--muted); font-family: var(--mono); }
+.ch-stats b { color: var(--text); font-weight: 600; }
+.canvas-wrap { position: relative; width: 100%; }
+#chartCanvas { display: block; width: 100%; height: 340px; border-radius: 8px; background: #06050c; border: 1px solid var(--line); cursor: crosshair; }
+.ch-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 8px; }
+.ch-legend .btn { margin-left: auto; }
+.lg::before { content: ""; display: inline-block; width: 14px; height: 3px; vertical-align: middle; margin-right: 5px; border-radius: 2px; }
+.lg-ma5::before { background: var(--yellow); }
+.lg-ma20::before { background: var(--magenta); }
+.lg-entry::before { background: var(--cyan); }
+.lg-liq::before { background: var(--orange); }
+#nwCanvas { display: block; width: 100%; height: 190px; border-radius: 8px; background: #06050c; border: 1px solid var(--line); }
+
+/* ---------- News feed ---------- */
+.newsfeed { position: sticky; top: 86px; align-self: start; max-height: calc(100vh - 110px); display: flex; flex-direction: column; }
+.newsfeed .panel { display: flex; flex-direction: column; min-height: 0; max-height: 100%; }
+.news-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; min-height: 120px; scrollbar-width: thin; }
+.news-list li { padding: 8px 4px; border-bottom: 1px solid rgba(42,36,82,.6); font-size: 12.5px; animation: newsIn .5s ease; }
+@keyframes newsIn { from { opacity: 0; transform: translateX(8px); background: rgba(0,240,255,.08); } }
+.news-meta { display: flex; gap: 6px; align-items: center; font-family: var(--mono); font-size: 10.5px; color: var(--muted); margin-bottom: 2px; }
+.ntag { padding: 0 5px; border-radius: 3px; font-weight: 700; letter-spacing: .05em; }
+.ntag-NEWS { background: rgba(0,240,255,.14); color: var(--cyan); }
+.ntag-BREAKING { background: var(--red); color: #fff; animation: blink 1s steps(2) 3; }
+.ntag-SYSTEM { background: rgba(157,107,255,.2); color: var(--violet); }
+.ntag-DARKNET { background: rgba(255,43,214,.18); color: var(--magenta); }
+.ntag-M\&A { background: rgba(247,255,74,.16); color: var(--yellow); }
+@keyframes blink { 50% { opacity: .35; } }
+.news-list li.imp-up .news-hl::before { content: "▲ "; color: var(--green); }
+.news-list li.imp-down .news-hl::before { content: "▼ "; color: var(--red); }
+
+/* ---------- Darknet ---------- */
+.dw-banner { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; border-color: rgba(255,43,214,.45); }
+.dw-banner .term { font-family: var(--mono); color: var(--magenta); font-size: 12px; }
+.dw-wallet { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dw-wallet b { font-family: var(--mono); font-size: 20px; color: var(--magenta); text-shadow: 0 0 8px rgba(255,43,214,.6); }
+.dw-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.dw-card { display: flex; flex-direction: column; gap: 4px; border-color: rgba(157,107,255,.4); }
+.dw-card .desc { font-size: 12.5px; color: var(--muted); margin: 2px 0 6px; }
+.dw-card .spec { font-family: var(--mono); font-size: 11.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.dw-card .spec b { color: var(--yellow); font-weight: 600; }
+.dw-card .btn { margin-top: auto; }
+.cd { font-family: var(--mono); font-size: 11.5px; color: var(--orange); min-height: 16px; margin-top: 4px; }
+.dw-grid2 { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 14px; }
+.broker-log { list-style: none; margin: 0; padding: 0; max-height: 300px; overflow-y: auto; font-family: var(--mono); font-size: 12px; }
+.broker-log li { padding: 6px 2px; border-bottom: 1px dashed rgba(59,51,117,.6); }
+.broker-log .who { color: var(--magenta); }
+.broker-log .when { color: var(--muted); font-size: 10.5px; margin-right: 6px; }
+.status-pill { font-family: var(--mono); font-size: 11px; padding: 1px 7px; border-radius: 8px; border: 1px solid currentColor; }
+
+/* ---------- Breach minigame ---------- */
+.breach-screen { font-family: var(--mono); }
+.breach-screen .scan { color: var(--green); font-size: 12px; margin-bottom: 10px; white-space: pre-line; }
+.breach-track { position: relative; height: 42px; border: 1px solid var(--green); border-radius: 6px; background: repeating-linear-gradient(90deg, rgba(25,255,156,.07) 0 2px, transparent 2px 12px); overflow: hidden; margin: 12px 0; }
+.breach-zone { position: absolute; top: 0; bottom: 0; background: rgba(25,255,156,.28); border-left: 2px solid var(--green); border-right: 2px solid var(--green); box-shadow: 0 0 16px rgba(25,255,156,.45) inset; }
+.breach-marker { position: absolute; top: -4px; bottom: -4px; width: 4px; margin-left: -2px; background: var(--magenta); box-shadow: 0 0 12px var(--magenta); left: 0; }
+.breach-timer { height: 4px; background: #1e1a3a; border-radius: 2px; overflow: hidden; }
+.breach-timer i { display: block; height: 100%; background: var(--orange); width: 100%; }
+.breach-result { margin-top: 10px; font-size: 14px; min-height: 22px; }
+
+/* ---------- M&A ---------- */
+.mna-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.stake-bar { position: relative; height: 10px; width: 150px; background: #1e1a3a; border-radius: 5px; overflow: hidden; display: inline-block; vertical-align: middle; }
+.stake-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, var(--violet), var(--magenta)); }
+.stake-bar::after { content: ""; position: absolute; left: 51%; top: 0; bottom: 0; width: 2px; background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+.stake-bar.done i { background: linear-gradient(90deg, var(--yellow), var(--green)); }
+.big-progress { height: 14px; width: 100%; }
+.takeover-count { font-family: var(--mono); font-size: 20px; color: var(--yellow); text-shadow: 0 0 8px rgba(247,255,74,.5); }
+
+/* ---------- Portfolio ---------- */
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.sum-card { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.sum-card label { display: block; font-size: 11px; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; }
+.sum-card b { font-family: var(--mono); font-size: 18px; }
+
+/* ---------- Info ---------- */
+.disclaimer-box { border-color: var(--yellow); background: rgba(247,255,74,.06); color: #fbffc8; }
+.info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.info-grid ul { margin: 6px 0 0; padding-left: 18px; }
+.info-grid li { margin: 3px 0; color: #cfcaf2; }
+kbd { font-family: var(--mono); font-size: 11px; padding: 1px 6px; border: 1px solid var(--line2); border-bottom-width: 2px; border-radius: 4px; background: var(--panel2); }
+
+/* ---------- Modal & toast ---------- */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px;
+  background: rgba(3,2,8,.78); backdrop-filter: blur(3px); animation: fadeIn .2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } }
+.modal {
+  width: min(560px, 100%); max-height: calc(100vh - 32px); overflow-y: auto;
+  background: linear-gradient(180deg, #120e25, #0a0816);
+  border: 1px solid var(--cyan); border-radius: 14px; padding: 20px 22px;
+  box-shadow: 0 0 40px rgba(0,240,255,.25), 0 0 0 1px rgba(255,43,214,.2) inset;
+}
+.modal.modal-danger { border-color: var(--red); box-shadow: 0 0 40px rgba(255,59,107,.35); }
+.modal.modal-gold { border-color: var(--yellow); box-shadow: 0 0 40px rgba(247,255,74,.3); }
+.modal.modal-wide { width: min(680px, 100%); }
+.modal-title { margin: 0 0 10px; font-family: var(--mono); letter-spacing: .1em; color: var(--cyan); font-size: 18px; }
+.modal-danger .modal-title { color: var(--red); }
+.modal-gold .modal-title { color: var(--yellow); }
+.modal-body { font-size: 14px; color: #d8d4f7; }
+.modal-body p { margin: 8px 0; }
+.modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.disclaimer-line {
+  margin: 12px 0; padding: 8px 12px; border-left: 3px solid var(--yellow); background: rgba(247,255,74,.07);
+  color: #fbffc8; font-size: 13px;
+}
+.error-line { margin: 10px 0; padding: 8px 12px; border-left: 3px solid var(--red); background: rgba(255,59,107,.08); color: #ffc9d5; font-size: 13px; }
+.toast-root { position: fixed; right: 16px; bottom: 16px; z-index: 120; display: flex; flex-direction: column; gap: 8px; max-width: min(380px, calc(100vw - 32px)); pointer-events: none; }
+.toast {
+  pointer-events: auto; background: #120e25; border: 1px solid var(--line2); border-left: 4px solid var(--cyan);
+  border-radius: 8px; padding: 9px 12px; font-size: 13px; box-shadow: 0 6px 20px rgba(0,0,0,.5);
+  animation: toastIn .25s ease;
+}
+.toast.ok { border-left-color: var(--green); }
+.toast.warn { border-left-color: var(--orange); }
+.toast.err { border-left-color: var(--red); }
+.toast.gold { border-left-color: var(--yellow); }
+.toast.out { opacity: 0; transform: translateY(6px); transition: all .3s; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(10px); } }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1180px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .newsfeed { position: static; max-height: none; }
+  .news-list { max-height: 360px; }
+}
+@media (max-width: 900px) {
+  .market-grid, .trade-grid, .dw-grid2, .mna-top { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+  .topbar { padding: 8px 16px; gap: 8px; }
+  .stats { flex-basis: 100%; }
+  .stat { flex: 1 1 calc(33% - 8px); min-width: 0; padding: 4px 8px; }
+  .stat.heat { flex-basis: 100%; }
+  .stat b { font-size: 13px; }
+  .layout { padding: 12px 16px 24px; }
+  #chartCanvas { height: 280px; }
+  .co-name small { max-width: 110px; }
+  .stake-bar { width: 90px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo-glyph" aria-hidden="true">◈</span>
+      <div>
+        <h1>NEON LEDGER</h1>
+        <small>Underground Fund · Neo City 2087 · operator <span class="mono">Ghost_7</span></small>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><label>Day</label><b id="hdrDay">1</b><div class="daybar"><i id="hdrDayProg"></i></div></div>
+      <div class="stat"><label>Cash 현금</label><b id="hdrCash">-</b></div>
+      <div class="stat"><label>Net Worth 순자산</label><b id="hdrNet">-</b></div>
+      <div class="stat heat" id="hdrHeatBox" data-action="tab" data-tab="darknet" title="NCSC Heat — 클릭하면 Heat Control(다크웹 탭)로 이동">
+        <label>NCSC Heat <span id="hdrHeatPct" class="mono">0%</span></label>
+        <div class="heatbar"><i id="hdrHeatFill"></i></div>
+      </div>
+      <div class="stat"><label>Dark Credits</label><b id="hdrDC">-</b></div>
+      <div class="stat"><label>Political Fund</label><b id="hdrPF">-</b></div>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="게임 속도">
+        <button data-action="speed" data-speed="0" title="일시정지 (P)">❚❚</button>
+        <button data-action="speed" data-speed="1" class="active">1x</button>
+        <button data-action="speed" data-speed="2">2x</button>
+        <button data-action="speed" data-speed="4">4x</button>
+      </div>
+      <button class="btn btn-sm" id="btnSound" data-action="toggle-sound" title="효과음 On/Off">🔊 SFX</button>
+      <label class="vol" title="마스터 볼륨"><span class="small muted">VOL</span><input id="volSlider" type="range" min="0" max="1" step="0.05" value="0.5" aria-label="마스터 볼륨"></label>
+      <span class="save-ind" id="saveInd">NOT SAVED</span>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="메인 탭">
+    <button class="tab-btn active" role="tab" data-action="tab" data-tab="market">시장 Market</button>
+    <button class="tab-btn" role="tab" data-action="tab" data-tab="trading">거래 데스크 Trading Desk <span class="badge" id="badgePos" hidden>0</span></button>
+    <button class="tab-btn" role="tab" data-action="tab" data-tab="darknet">다크웹 Darknet</button>
+    <button class="tab-btn" role="tab" data-action="tab" data-tab="mna">M&amp;A 레이어</button>
+    <button class="tab-btn" role="tab" data-action="tab" data-tab="portfolio">포트폴리오 Portfolio</button>
+    <button class="tab-btn" role="tab" data-action="tab" data-tab="info">정보 (i) Info</button>
+  </nav>
+
+  <div class="layout">
+    <main id="main">
+      <!-- ================= MARKET ================= -->
+      <section class="tab-panel" id="tab-market" role="tabpanel">
+        <div class="market-grid">
+          <div class="panel">
+            <div class="panel-head">
+              <h2>NEO CITY EXCHANGE</h2>
+              <span class="muted small">클릭: 차트 보기 · 더블클릭: 거래 데스크</span>
+            </div>
+            <div class="table-wrap">
+              <table class="ctable">
+                <thead><tr><th>종목 Ticker</th><th class="num">현재가</th><th class="num">등락률</th><th class="num">시가총액</th><th class="num">내 지분</th></tr></thead>
+                <tbody id="marketBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="chart-slot" data-chart-slot></div>
+        </div>
+      </section>
+
+      <!-- ================= TRADING ================= -->
+      <section class="tab-panel" id="tab-trading" role="tabpanel" hidden>
+        <div class="trade-grid">
+          <div class="chart-slot" data-chart-slot></div>
+          <div class="panel order-panel">
+            <div class="panel-head"><h2>ORDER TICKET</h2><span class="tag">MARKET ORDER</span></div>
+            <label class="field"><span>종목 Ticker</span><select id="orderTicker"></select></label>
+            <div class="kv"><span>현재가 Last</span><b id="orderPrice">-</b></div>
+            <div class="kv"><span>가용 현금 Cash</span><b id="orderCash">-</b></div>
+            <label class="field"><span>증거금 Margin (₵)</span><input id="orderMargin" type="number" min="0" step="100" value="10000" inputmode="decimal"></label>
+            <div class="quick-row">
+              <button class="chip" data-action="margin-pct" data-pct="0.1">10%</button>
+              <button class="chip" data-action="margin-pct" data-pct="0.25">25%</button>
+              <button class="chip" data-action="margin-pct" data-pct="0.5">50%</button>
+              <button class="chip" data-action="margin-pct" data-pct="1">MAX</button>
+            </div>
+            <label class="field"><span>레버리지 Leverage <b class="mono" id="orderLevLabel">1x</b></span><input id="orderLev" type="range" min="1" max="5" step="1" value="1"></label>
+            <div class="lev-ticks"><span>1x</span><span>2x</span><span>3x</span><span>4x</span><span>5x</span></div>
+            <div class="preview">
+              <div class="kv"><span>노출 규모 Notional</span><b id="pvNotional">-</b></div>
+              <div class="kv"><span>수량 Qty</span><b id="pvShares">-</b></div>
+              <div class="kv"><span>수수료 Fee (0.1%)</span><b id="pvFee">-</b></div>
+              <div class="kv"><span>강제청산가 LIQ (L / S)</span><b id="pvLiq">-</b></div>
+            </div>
+            <div class="order-actions">
+              <button class="btn btn-long" data-action="open-long">▲ LONG 매수</button>
+              <button class="btn btn-short" data-action="open-short">▼ SHORT 공매도</button>
+            </div>
+            <div class="pos-box" id="orderPosBox" hidden>
+              <div class="kv"><span>보유 포지션</span><b id="opbType">-</b></div>
+              <div class="kv"><span>진입가 / 수량</span><b id="opbEntry">-</b></div>
+              <div class="kv"><span>강제청산가</span><b id="opbLiq">-</b></div>
+              <div class="kv"><span>평가손익 PnL</span><b id="opbPnl">-</b></div>
+              <div class="btns">
+                <button class="btn btn-sm" data-action="close-selected" data-frac="0.5">50% 청산</button>
+                <button class="btn btn-sm btn-danger" data-action="close-selected" data-frac="1">전량 청산 Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>OPEN POSITIONS</h2><span class="muted small mono" id="tradePosSummary"></span></div>
+          <div class="table-wrap">
+            <table class="ctable">
+              <thead><tr><th>종목</th><th>방향</th><th class="num">Lev</th><th class="num">수량</th><th class="num">진입가</th><th class="num">현재가</th><th class="num">청산가</th><th class="num">증거금</th><th class="num">손익 PnL</th><th></th></tr></thead>
+              <tbody id="tradePosBody"></tbody>
+            </table>
+            <p class="empty" id="tradePosEmpty">열린 포지션 없음 — No open positions.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= DARKNET ================= -->
+      <section class="tab-panel" id="tab-darknet" role="tabpanel" hidden>
+        <div class="panel dw-banner">
+          <div>
+            <div class="term">// DARKNET RELAY · onion-mesh 7 hops · 익명 브로커 네트워크 접속됨</div>
+            <div class="small muted">모든 액션은 확률·스탯 기반의 추상적 게임 메커니즘입니다. 사용할수록 NCSC Heat가 오릅니다.</div>
+          </div>
+          <div class="dw-wallet">
+            <div><div class="small muted">DARK CREDITS</div><b id="dwDC">0 DC</b></div>
+            <button class="btn btn-magenta" data-action="buy-dc">+10 DC 환전 <span class="mono small" id="dcCost"></span></button>
+          </div>
+        </div>
+        <div class="dw-grid">
+          <div class="panel dw-card">
+            <h3>📡 인사이더 루머 Insider Rumor</h3>
+            <p class="desc">익명 브로커에게서 익일 특정 기업의 호재/악재 예고를 삽니다. 브로커 정보는 100% 믿을 수 없습니다.</p>
+            <div class="spec"><span>비용 <b>8 DC</b></span><span>신뢰도 <b>70~90%</b></span><span>Heat <b>+2~5</b></span><span>쿨다운 <b>45s</b></span></div>
+            <label class="field"><span>대상 기업 Target</span><select id="dwRumorTarget"></select></label>
+            <button class="btn btn-magenta" id="btnRumor" data-action="buy-rumor">정보 구매 Buy Intel</button>
+            <div class="cd" id="cdRumor"></div>
+          </div>
+          <div class="panel dw-card">
+            <h3>📣 찌라시 캠페인 Rumor Campaign</h3>
+            <p class="desc">일정 시간 뒤 뉴스 피드에 출처 불명의 헤드라인이 퍼지며 주가가 급변합니다. 규모가 클수록 발각 위험도 커집니다.</p>
+            <label class="field"><span>대상 기업 Target</span><select id="dwCampTarget"></select></label>
+            <div class="radio-row" role="radiogroup" aria-label="캠페인 방향">
+              <label><input type="radio" name="campDir" value="pump" checked>🚀 PUMP 띄우기</label>
+              <label><input type="radio" name="campDir" value="dump">💀 DUMP 누르기</label>
+            </div>
+            <label class="field"><span>규모 Scale</span>
+              <select id="dwCampScale">
+                <option value="small">Small — 15 DC · ±8% · Heat +10 · 발각 10%</option>
+                <option value="medium" selected>Medium — 30 DC · ±15% · Heat +17 · 발각 20%</option>
+                <option value="large">Large — 55 DC · ±25% · Heat +25 · 발각 35%</option>
+              </select>
+            </label>
+            <div class="spec"><span>쿨다운 <b>90s</b></span><span>발각 시 <b>현금 15% 2일 동결 · Heat +8</b></span></div>
+            <button class="btn btn-magenta" id="btnCampaign" data-action="launch-campaign">캠페인 가동 Launch</button>
+            <div class="cd" id="cdCampaign"></div>
+          </div>
+          <div class="panel dw-card">
+            <h3>🧱 Firewall Breach (미니게임)</h3>
+            <p class="desc">순수 타이밍 미니게임입니다. 움직이는 커서를 초록 구간에서 멈추면 성공 — 대상 기업 주가가 일시 하락합니다. 대형 기업일수록 구간이 좁습니다.</p>
+            <div class="spec"><span>비용 <b>10 DC</b></span><span>성공 Heat <b>+6</b></span><span>실패 Heat <b>+12</b></span><span>쿨다운 <b>120s</b></span></div>
+            <label class="field"><span>대상 기업 Target</span><select id="dwBreachTarget"></select></label>
+            <button class="btn btn-magenta" id="btnBreach" data-action="start-breach">접속 시도 Start</button>
+            <div class="cd" id="cdBreach"></div>
+          </div>
+          <div class="panel dw-card">
+            <h3>🏛️ Heat Control · 정치 로비</h3>
+            <p class="desc">정치자금(PF) 스탯을 소모해 NCSC Heat를 즉시 낮추는 단순 자원 교환입니다. 인수한 기업은 매일 PF +3을 제공합니다.</p>
+            <div class="kv"><span>NCSC Heat</span><b id="dwHeat">0%</b></div>
+            <div class="kv"><span>Political Fund</span><b id="dwPF">0 PF</b></div>
+            <button class="btn" data-action="buy-pf">정치자금 조성 +5 PF <span class="mono small" id="pfCost"></span></button>
+            <button class="btn btn-primary" id="btnLobby" data-action="lobby">로비 Lobby (10 PF → Heat −18)</button>
+            <div class="cd" id="cdLobby"></div>
+          </div>
+        </div>
+        <div class="dw-grid2">
+          <div class="panel">
+            <div class="panel-head"><h2>INTEL LEDGER</h2><span class="muted small">구매한 루머와 결과</span></div>
+            <div class="table-wrap">
+              <table class="ctable">
+                <thead><tr><th>#</th><th>종목</th><th>예고</th><th class="num">신뢰도</th><th>예정</th><th>브로커</th><th>결과</th></tr></thead>
+                <tbody id="intelBody"></tbody>
+              </table>
+              <p class="empty" id="intelEmpty">아직 구매한 정보가 없습니다.</p>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>BROKER CHANNEL</h2><span class="muted small">encrypted · ephemeral</span></div>
+            <ul class="broker-log" id="brokerLog"></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= M&A ================= -->
+      <section class="tab-panel" id="tab-mna" role="tabpanel" hidden>
+        <div class="panel">
+          <div class="panel-head">
+            <h2>M&amp;A LAYER · 적대적 인수 Hostile Takeover</h2>
+            <span>인수 완료 <span class="takeover-count" id="mnaCount">0 / 3</span></span>
+          </div>
+          <div class="mna-top">
+            <div>
+              <label class="field"><span>대상 기업 Target</span><select id="mnaTicker"></select></label>
+              <div class="kv"><span>현재가 / 시가총액</span><b id="mnaPriceCap">-</b></div>
+              <div class="kv"><span>보유 지분</span><b id="mnaStake">-</b></div>
+              <div class="stake-bar big-progress" id="mnaBar"><i></i></div>
+              <div class="kv"><span>다음 보너스 배당</span><b id="mnaNextBonus">-</b></div>
+              <div class="kv"><span>51%까지 예상 비용</span><b id="mnaNeed">-</b></div>
+            </div>
+            <div>
+              <label class="field"><span>매집 금액 Amount (₵)</span><input id="mnaAmount" type="number" min="0" step="1000" value="50000" inputmode="decimal"></label>
+              <div class="quick-row">
+                <button class="chip" data-action="mna-amount" data-amount="10000">10K</button>
+                <button class="chip" data-action="mna-amount" data-amount="50000">50K</button>
+                <button class="chip" data-action="mna-amount" data-amount="250000">250K</button>
+                <button class="chip" data-action="mna-amount" data-amount="1000000">1M</button>
+                <button class="chip" data-action="mna-amount" data-amount="max">MAX</button>
+                <button class="chip" data-action="mna-amount" data-amount="need">51%까지</button>
+              </div>
+              <div class="kv" style="margin-top:8px"><span>예상 체결가 (시장 충격 포함)</span><b id="mnaExec">-</b></div>
+              <div class="order-actions" style="margin-top:10px">
+                <button class="btn btn-long" data-action="mna-buy">매집 Accumulate</button>
+                <button class="btn btn-short" data-action="mna-sell" data-frac="0.5">50% 매각</button>
+              </div>
+              <button class="btn btn-sm btn-danger" style="margin-top:8px;width:100%" data-action="mna-sell" data-frac="1">전량 매각 Sell All</button>
+              <p class="small muted">매집은 레버리지 없는 현물 매수이며 대량 매집 시 주가가 밀려 올라갑니다(시장 충격). 10% 단위마다 보너스 배당, 51% 도달 시 인수 완료 — 이후 지분은 매각할 수 없고 매일 고정 수익이 들어옵니다.</p>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>OWNERSHIP MAP</h2><span class="muted small">노란 선 = 51% 인수 기준</span></div>
+          <div class="table-wrap">
+            <table class="ctable">
+              <thead><tr><th>종목</th><th class="num">현재가</th><th class="num">시가총액</th><th>지분율</th><th class="num">보유 평가액</th><th>상태</th></tr></thead>
+              <tbody id="mnaBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>ACQUIRED EMPIRE</h2><span class="muted small mono" id="mnaIncome"></span></div>
+          <div class="table-wrap">
+            <table class="ctable">
+              <thead><tr><th>기업</th><th>인수일</th><th class="num">일일 고정 수익</th><th class="num">일일 PF</th></tr></thead>
+              <tbody id="takeoverBody"></tbody>
+            </table>
+            <p class="empty" id="takeoverEmpty">아직 인수한 기업이 없습니다. 51%를 모아 첫 인수를 완성하세요.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= PORTFOLIO ================= -->
+      <section class="tab-panel" id="tab-portfolio" role="tabpanel" hidden>
+        <div class="summary-grid">
+          <div class="sum-card"><label>Cash 현금</label><b id="pfCash">-</b></div>
+          <div class="sum-card"><label>Positions 포지션</label><b id="pfPos">-</b></div>
+          <div class="sum-card"><label>Stakes 지분</label><b id="pfStakes">-</b></div>
+          <div class="sum-card"><label>Frozen 동결</label><b id="pfFrozen">-</b></div>
+          <div class="sum-card"><label>Net Worth 순자산</label><b id="pfNet">-</b></div>
+          <div class="sum-card"><label>Return 수익률</label><b id="pfReturn">-</b></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>NET WORTH HISTORY</h2><span class="muted small">일 마감 기준 · Day close</span></div>
+          <canvas id="nwCanvas"></canvas>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>LEVERAGED POSITIONS</h2></div>
+          <div class="table-wrap">
+            <table class="ctable">
+              <thead><tr><th>종목</th><th>방향</th><th class="num">Lev</th><th class="num">수량</th><th class="num">진입가</th><th class="num">현재가</th><th class="num">청산가</th><th class="num">증거금</th><th class="num">손익 PnL</th><th></th></tr></thead>
+              <tbody id="pfPosBody"></tbody>
+            </table>
+            <p class="empty" id="pfPosEmpty">열린 포지션 없음.</p>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>EQUITY STAKES</h2></div>
+          <div class="table-wrap">
+            <table class="ctable">
+              <thead><tr><th>종목</th><th class="num">보유 주식</th><th class="num">지분율</th><th class="num">평균단가</th><th class="num">평가액</th><th class="num">평가손익</th><th>상태</th></tr></thead>
+              <tbody id="pfStakeBody"></tbody>
+            </table>
+            <p class="empty" id="pfStakeEmpty">보유 지분 없음 — M&amp;A 레이어에서 매집하세요.</p>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>OPERATOR STATS</h2></div>
+          <div class="summary-grid">
+            <div class="sum-card"><label>체결 Trades</label><b id="stTrades">0</b></div>
+            <div class="sum-card"><label>실현손익 Realized</label><b id="stRealized">0</b></div>
+            <div class="sum-card"><label>강제청산 Liquidations</label><b id="stLiq">0</b></div>
+            <div class="sum-card"><label>다크웹 작전 Ops</label><b id="stOps">0</b></div>
+            <div class="sum-card"><label>배당 수령 Dividends</label><b id="stDiv">0</b></div>
+            <div class="sum-card"><label>일일 고정수익 Daily</label><b id="stDaily">0</b></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= INFO ================= -->
+      <section class="tab-panel" id="tab-info" role="tabpanel" hidden>
+        <div class="panel disclaimer-box">
+          <b>⚠ DISCLAIMER</b> — 이 게임은 완전한 허구이며 실제 금융 자문이 아니고 불법 행위를 조장하지 않습니다.
+          <div class="small" style="margin-top:4px;opacity:.85">등장하는 모든 기업·인물·브로커·기관은 가상의 존재이며, 게임 속 모든 액션은 숫자 스탯만 바꾸는 추상적 메커니즘입니다.</div>
+        </div>
+        <div class="info-grid">
+          <div class="panel">
+            <h3>STORY</h3>
+            <p class="small" style="color:#cfcaf2">2087년, 메가코프 6곳이 전력망·언론·사법 시스템까지 장악한 가상도시 <b>네오시티(Neo City)</b>. 제도권 금융에서 쫓겨난 헤지펀드 트레이더 <b class="mono">Ghost_7</b>은 지하로 숨어들어 익명 브로커 네트워크와 함께 20개 가상 기업의 주가를 뒤흔들며 금융 제국을 세우려 한다.</p>
+            <p class="small muted">NCSC — 네오시티 증권감독위원회(Neo City Securities Commission, 가상 기관). 다크웹 활동이 쌓일수록 NCSC Heat(감시 수위)가 오른다.</p>
+          </div>
+          <div class="panel">
+            <h3>승리 · 패배 조건</h3>
+            <ul class="small">
+              <li><b>승리:</b> 서로 다른 기업 <b>3곳</b>의 지분 51%를 확보해 적대적 인수를 완성 → 제국 완성.</li>
+              <li><b>패배 (Seized):</b> NCSC Heat 100% 도달 → 전 자산 몰수.</li>
+              <li><b>패배 (Bankrupt):</b> 순자산이 ₵1,000 미만이 되고 남은 포지션·지분이 없음.</li>
+              <li>승리 후에도 샌드박스로 계속 플레이할 수 있습니다.</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>시간 · 시장</h3>
+            <ul class="small">
+              <li>1틱 = 실시간 1초(1x 기준), 1 Day = 90틱. 매 틱마다 캔들 1개가 생성됩니다.</li>
+              <li>시세는 변동성 기반 랜덤워크 + 펀더멘털 앵커 회귀로 움직입니다.</li>
+              <li>MA5 / MA20 은 최근 5개 / 20개 봉 종가의 이동평균입니다.</li>
+              <li>배경 뉴스(섹터 훈풍/악재, 개별 기업 이슈)가 무작위로 발생합니다.</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>거래 데스크</h3>
+            <ul class="small">
+              <li>증거금 × 레버리지(1~5x) 만큼 Long/Short 포지션을 엽니다. 수수료 0.1%.</li>
+              <li>손실이 증거금의 90%에 도달하면 강제청산(LIQ)됩니다.</li>
+              <li>같은 종목은 같은 방향으로만 추가 진입할 수 있습니다(평단 합산).</li>
+              <li>레버리지 포지션은 지분율(M&amp;A)에 포함되지 않습니다.</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>다크웹 · NCSC Heat</h3>
+            <ul class="small">
+              <li>다크웹 액션은 Dark Credits(DC)를 소모합니다. DC는 현금으로 환전합니다(가격은 순자산에 비례).</li>
+              <li>루머·캠페인·Breach는 모두 NCSC Heat를 올립니다. Heat는 매 틱 0.02씩 자연 감소합니다.</li>
+              <li>로비: 10 PF를 소모해 Heat −18 (쿨다운 15s).</li>
+              <li>Heat 75% / 90%에서 경고, 100%에서 자산 몰수 게임오버.</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>M&amp;A 레이어</h3>
+            <ul class="small">
+              <li>현물 매집으로 지분율이 쌓이며, 대량 매집은 주가를 밀어 올립니다.</li>
+              <li>지분 10%·20%·30%·40%·50% 최초 도달 시 시가총액 비례 보너스 배당.</li>
+              <li>51% 도달 → 적대적 인수 성공. 매일 시가총액의 2.5% 고정 수익 + PF 3.</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>단축키 · 저장</h3>
+            <ul class="small">
+              <li><kbd>1</kbd>~<kbd>6</kbd> 탭 전환 · <kbd>P</kbd> 일시정지/재개 · <kbd>Space</kbd> Breach 정지</li>
+              <li>진행 상황은 LocalStorage에 5틱마다, 그리고 주요 액션 직후 자동 저장됩니다.</li>
+            </ul>
+            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-sm" data-action="save-now">지금 저장</button>
+              <button class="btn btn-sm btn-danger" data-action="reset-game">새 게임 (데이터 초기화)</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside class="newsfeed" aria-label="뉴스 피드">
+      <div class="panel">
+        <div class="panel-head"><h2>LIVE FEED 📰</h2><span class="muted small mono" id="feedClock">D1 · T0</span></div>
+        <ul class="news-list" id="newsList"></ul>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- Chart panel: moved between the Market and Trading tabs -->
+<div id="chartDock" hidden>
+  <div class="panel chart-panel" id="chartPanel">
+    <div class="chart-head">
+      <div class="ch-id">
+        <span class="ch-logo" id="chLogo">◈</span>
+        <div>
+          <b id="chTicker">-</b> <span class="muted" id="chName"></span>
+          <div class="small muted" id="chSector"></div>
+        </div>
+      </div>
+      <div class="ch-price"><b id="chPrice">-</b><span id="chChange">-</span></div>
+    </div>
+    <div class="ch-stats small">
+      <span>Day O <b id="chOpen">-</b></span>
+      <span>H <b id="chHigh">-</b></span>
+      <span>L <b id="chLow">-</b></span>
+      <span>MA5 <b id="chMa5">-</b></span>
+      <span>MA20 <b id="chMa20">-</b></span>
+      <span>시총 <b id="chCap">-</b></span>
+    </div>
+    <div class="canvas-wrap"><canvas id="chartCanvas" aria-label="캔들스틱 차트"></canvas></div>
+    <div class="ch-legend small">
+      <span class="lg lg-ma5">MA5</span><span class="lg lg-ma20">MA20</span><span class="lg lg-entry">ENTRY</span><span class="lg lg-liq">LIQ</span>
+      <span class="muted">1봉 = 1틱 · 1 Day = 90틱</span>
+      <button class="btn btn-sm" data-action="go-trade">거래 데스크 →</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalRoot"></div>
+<div class="toast-root" id="toastRoot" aria-live="polite"></div>
+
+<script>
+'use strict';
+
+/* =====================================================================
+ *  CONSTANTS
+ * ===================================================================== */
+const SAVE_KEY = 'neonLedger.save.v1';
+const SAVE_VERSION = 1;
+const TICK_MS = 1000;          // 1 tick = 1s at 1x
+const DAY_TICKS = 90;          // ticks per game day
+const HISTORY_CAP = 180;       // candles kept per company
+const BACKFILL_CANDLES = 60;
+const START_CASH = 100000;
+const START_DC = 25;
+const START_PF = 10;
+const TRADE_FEE = 0.001;
+const STAKE_FEE = 0.002;
+const IMPACT_K = 0.35;         // market impact per 100% of shares outstanding
+const MAINT_LOSS = 0.9;        // liquidation when loss reaches 90% of margin
+const HEAT_DECAY = 0.02;       // per tick
+const TAKEOVER_PCT = 51;
+const VICTORY_TAKEOVERS = 3;
+const NEWS_CAP = 80;
+const BROKER_LOG_CAP = 40;
+const INTEL_CAP = 20;
+const NW_HISTORY_CAP = 240;
+const AUTOSAVE_EVERY = 5;      // ticks
+const BANKRUPT_LIMIT = 1000;
+
+const COMPANY_SPECS = [
+  { ticker: 'NYDN', name: 'NeoDyne Corp', sector: 'AI', basePrice: 128.5, volatility: 0.035 },
+  { ticker: 'AEVX', name: 'Aevex Biotech', sector: '바이오', basePrice: 76.2, volatility: 0.042 },
+  { ticker: 'KRNE', name: 'Kroneus Energy', sector: '에너지', basePrice: 54.1, volatility: 0.028 },
+  { ticker: 'VTBD', name: 'Voidblack Defense Systems', sector: '방산', basePrice: 210.75, volatility: 0.031 },
+  { ticker: 'CSER', name: 'Chrome Serenade Entertainment', sector: '엔터', basePrice: 33.4, volatility: 0.05 },
+  { ticker: 'OBCG', name: 'Obsidian Capital Group', sector: '금융', basePrice: 145.6, volatility: 0.025 },
+  { ticker: 'HLXG', name: 'Helixar Genomics', sector: '바이오', basePrice: 88.9, volatility: 0.045 },
+  { ticker: 'PFRB', name: 'Pale Fire Robotics', sector: '로보틱스', basePrice: 62.3, volatility: 0.04 },
+  { ticker: 'ZOS', name: 'Zenith Orbital Systems', sector: '우주항공', basePrice: 175, volatility: 0.038 },
+  { ticker: 'GWSC', name: 'Ghostlatch Security', sector: '사이버보안', basePrice: 47.8, volatility: 0.05 },
+  { ticker: 'MRDT', name: 'Meridian Telecom', sector: '통신', basePrice: 39.2, volatility: 0.02 },
+  { ticker: 'VRMP', name: 'Vermilion Pharma', sector: '제약', basePrice: 68.45, volatility: 0.033 },
+  { ticker: 'IONF', name: 'Ion Forge Semiconductors', sector: '반도체', basePrice: 152.3, volatility: 0.047 },
+  { ticker: 'NSLG', name: 'Nightshade Logistics', sector: '물류', basePrice: 29.9, volatility: 0.022 },
+  { ticker: 'HLCM', name: 'Halcyon Media Network', sector: '미디어', basePrice: 41.15, volatility: 0.036 },
+  { ticker: 'RBAC', name: 'Rustbelt Arms Co.', sector: '방산', basePrice: 96.7, volatility: 0.03 },
+  { ticker: 'SNPI', name: 'Synapse Interactive', sector: '게임', basePrice: 24.6, volatility: 0.06 },
+  { ticker: 'AURT', name: 'Aurelia Realty Trust', sector: '부동산', basePrice: 58.2, volatility: 0.018 },
+  { ticker: 'BTPC', name: 'Blacktide Petrochem', sector: '화학', basePrice: 71.35, volatility: 0.027 },
+  { ticker: 'DCMC', name: 'Deepcore Mining Corp', sector: '광업', basePrice: 44.9, volatility: 0.032 }
+];
+
+// Presentation-only metadata (not saved): logo glyph + target market cap used to derive shares outstanding.
+const COMPANY_META = {
+  NYDN: { logo: '🧠', cap: 4.2e6 }, AEVX: { logo: '🧬', cap: 1.8e6 }, KRNE: { logo: '⚡', cap: 1.6e6 },
+  VTBD: { logo: '🛡️', cap: 5.5e6 }, CSER: { logo: '🎤', cap: 0.9e6 }, OBCG: { logo: '🏦', cap: 4.8e6 },
+  HLXG: { logo: '🔬', cap: 2.1e6 }, PFRB: { logo: '🤖', cap: 1.5e6 }, ZOS: { logo: '🛰️', cap: 3.9e6 },
+  GWSC: { logo: '🔐', cap: 1.1e6 }, MRDT: { logo: '📡', cap: 1.3e6 }, VRMP: { logo: '💊', cap: 1.9e6 },
+  IONF: { logo: '💾', cap: 4.5e6 }, NSLG: { logo: '📦', cap: 0.95e6 }, HLCM: { logo: '📺', cap: 1.2e6 },
+  RBAC: { logo: '🎯', cap: 2.6e6 }, SNPI: { logo: '🎮', cap: 0.8e6 }, AURT: { logo: '🏙️', cap: 2.2e6 },
+  BTPC: { logo: '🛢️', cap: 2.4e6 }, DCMC: { logo: '⛏️', cap: 1.4e6 }
+};
+
+const BROKERS = ['Nyx_Relay', 'Madame Cipher', '0xKITSUNE', 'Babel//Moth', 'Static Saint', 'Velvet_Null'];
+// Tickers renamed after v1 saves existed: migrated on load so old saves keep working.
+const TICKER_RENAMES = { AEON: 'AEVX' };
+
+// Gameplay tuning (values mirror the in-game spec text)
+const BONUS_LEVELS = [10, 20, 30, 40, 50];
+const BONUS_RATE = 0.01;            // bonus dividend = 1% of market cap per level
+const DAILY_INCOME_RATE = 0.025;    // acquired company: 2.5% of market cap per day
+const DAILY_PF = 3;
+const RUMOR = { cost: 8, relMin: 70, relMax: 90, heatMin: 2, heatMax: 5, cooldown: 45 };
+const CAMPAIGN_SCALES = {
+  small: { cost: 15, mag: 0.08, heat: 10, detect: 0.10 },
+  medium: { cost: 30, mag: 0.15, heat: 17, detect: 0.20 },
+  large: { cost: 55, mag: 0.25, heat: 25, detect: 0.35 }
+};
+const CAMPAIGN = { cooldown: 90, freezeFrac: 0.15, freezeDays: 2, detectHeat: 8 };
+const BREACH = { cost: 10, heatOk: 6, heatFail: 12, cooldown: 120, timeMs: 6000 };
+const LOBBY = { pf: 10, heat: 18, cooldown: 15 };
+const DC_PACK = 10;
+const PF_PACK = 5;
+const NEWS_TAGS = ['NEWS', 'BREAKING', 'SYSTEM', 'DARKNET', 'M&A'];
+
+/* =====================================================================
+ *  UTILITIES
+ * ===================================================================== */
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const rand = (a, b) => a + Math.random() * (b - a);
+const randInt = (a, b) => Math.floor(rand(a, b + 1));
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const r4 = x => Math.round(x * 1e4) / 1e4;
+function gauss() {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+function fmtNum(n, d = 2) {
+  return Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+function fmtCredits(n) {
+  const v = Math.round(n);
+  return (v < 0 ? '-' : '') + '₵' + fmtNum(Math.abs(v), 0);
+}
+function fmtSigned(n) { return (n >= 0 ? '+' : '-') + '₵' + fmtNum(Math.abs(Math.round(n)), 0); }
+function fmtCompact(n) {
+  const a = Math.abs(n);
+  if (a >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+  if (a >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+  if (a >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+  return n.toFixed(0);
+}
+function fmtPct(x, d = 2) { return (x >= 0 ? '+' : '') + (x * 100).toFixed(d) + '%'; }
+function fmtPrice(p) { return fmtNum(p, 2); }
+function fmtShares(s) { return s >= 1000 ? fmtNum(s, 0) : fmtNum(s, 2); }
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+function toneClass(x) { return x > 0 ? 'up' : x < 0 ? 'down' : 'flat'; }
+function setText(el, text) { if (el && el.textContent !== text) el.textContent = text; }
+function setTone(el, x) { if (!el) return; el.classList.toggle('up', x > 0); el.classList.toggle('down', x < 0); el.classList.toggle('flat', !(x > 0) && !(x < 0)); }
+
+/* =====================================================================
+ *  GLOBAL STATE
+ * ===================================================================== */
+let gameState = null;
+const runtime = {
+  started: false,
+  speed: 1,
+  lastFrame: 0,
+  acc: 0,
+  selected: 'NYDN',
+  tab: 'market',
+  blocking: 0,
+  hoverX: null,
+  minigame: null,
+  lastUiPulse: 0,
+  lastMoveSfx: 0,
+  renderedNewsId: 0,
+  renderedLogId: 0,
+  heatWarned: { 75: false, 90: false },
+  companyIndex: new Map(),
+  saveFailedNotified: false,
+  prevPrices: new Map()
+};
+
+function getCompany(ticker) { return runtime.companyIndex.get(ticker); }
+function indexCompanies() {
+  runtime.companyIndex = new Map(gameState.companies.map(c => [c.ticker, c]));
+}
+function logoOf(ticker) { return (COMPANY_META[ticker] && COMPANY_META[ticker].logo) || '◈'; }
+function marketCap(c) { return c.currentPrice * c.sharesOutstanding; }
+
+/* =====================================================================
+ *  PRICE SIMULATION (OHLC random walk + volatility + fundamental anchor)
+ * ===================================================================== */
+function generateCandle(c) {
+  const open = c.currentPrice;
+  let p = open, hi = open, lo = open;
+  let drift = 0;
+  if (c.activeDrifts && c.activeDrifts.length) {
+    for (const d of c.activeDrifts) { drift += d.perTick; d.remaining--; }
+    c.activeDrifts = c.activeDrifts.filter(d => d.remaining > 0);
+  }
+  const SUB = 6;
+  const sd = c.volatility * 0.18 / Math.sqrt(SUB);
+  const jumpAt = c.pendingJump ? randInt(0, SUB - 1) : -1;
+  for (let i = 0; i < SUB; i++) {
+    if (i === jumpAt) {
+      p *= c.pendingJump;
+      c.anchor *= 1 + (c.pendingJump - 1) * 0.6;   // 60% of a shock is "sticky"
+      c.pendingJump = 0;
+    }
+    const rev = (Math.log(c.anchor) - Math.log(p)) * 0.004;
+    p *= Math.exp(gauss() * sd + (drift + rev) / SUB);
+    if (p < 0.5) p = 0.5;
+    if (p > hi) hi = p;
+    if (p < lo) lo = p;
+  }
+  c.anchor *= Math.exp(gauss() * c.volatility * 0.03 + drift * 0.5);
+  c.anchor = clamp(c.anchor, c.basePrice * 0.15, c.basePrice * 8);
+  c.currentPrice = r4(p);
+  return { open: r4(open), high: r4(Math.max(hi, c.currentPrice)), low: r4(Math.min(lo, c.currentPrice)), close: c.currentPrice };
+}
+function maAt(hist, idx, n) {
+  if (idx < n - 1) return null;
+  let s = 0;
+  for (let i = idx - n + 1; i <= idx; i++) s += hist[i].close;
+  return s / n;
+}
+function updateMAs(c) {
+  const h = c.priceHistory, i = h.length - 1;
+  const m5 = maAt(h, i, 5), m20 = maAt(h, i, 20);
+  c.ma5 = m5 === null ? c.currentPrice : r4(m5);
+  c.ma20 = m20 === null ? c.currentPrice : r4(m20);
+}
+function pushCandle(c, k) {
+  c.priceHistory.push(k);
+  if (c.priceHistory.length > HISTORY_CAP) c.priceHistory.splice(0, c.priceHistory.length - HISTORY_CAP);
+  updateMAs(c);
+}
+function createCompany(spec) {
+  const meta = COMPANY_META[spec.ticker];
+  const c = {
+    ticker: spec.ticker, name: spec.name, sector: spec.sector,
+    basePrice: spec.basePrice, volatility: spec.volatility,
+    currentPrice: r4(spec.basePrice * (1 + (Math.random() - 0.5) * 0.08)),
+    anchor: spec.basePrice,
+    sharesOutstanding: Math.round(meta.cap / spec.basePrice),
+    dayOpen: spec.basePrice,
+    priceHistory: [], ma5: spec.basePrice, ma20: spec.basePrice,
+    pendingEvents: [], activeDrifts: [], pendingJump: 0
+  };
+  for (let i = 0; i < BACKFILL_CANDLES; i++) {
+    const k = generateCandle(c);
+    k.day = 0; k.tick = DAY_TICKS - BACKFILL_CANDLES + i + 1;
+    pushCandle(c, k);
+  }
+  c.dayOpen = c.currentPrice;
+  return c;
+}
+
+/* =====================================================================
+ *  GAME STATE: CREATE / VALIDATE / SAVE / LOAD
+ * ===================================================================== */
+function createNewGame(prevAudio) {
+  const companies = COMPANY_SPECS.map(createCompany);
+  const st = {
+    version: SAVE_VERSION,
+    day: 1, tickCount: 0,
+    cash: START_CASH, netWorth: START_CASH,
+    companies,
+    portfolio: {},
+    ownershipStakes: {},
+    hostileTakeovers: [],
+    secHeat: 0,
+    politicalFunds: START_PF,
+    darkwebCredits: START_DC,
+    darkwebCooldowns: { rumor: 0, campaign: 0, breach: 0, lobby: 0 },
+    newsFeed: [], newsSeq: 0,
+    intel: [], intelSeq: 0,
+    brokerLog: [], brokerSeq: 0,
+    frozenAssets: { amount: 0, releaseDay: 0 },
+    netWorthHistory: [{ day: 0, value: START_CASH }],
+    audioSettings: prevAudio ? { enabled: !!prevAudio.enabled, masterVolume: clamp(Number(prevAudio.masterVolume) || 0, 0, 1) } : { enabled: true, masterVolume: 0.5 },
+    stats: { trades: 0, liquidations: 0, realizedPnl: 0, darkOps: 0, dividends: 0, fixedIncome: 0 },
+    lastSavedAt: 0,
+    gameStatus: 'running',
+    victoryAchieved: false,
+    finalReport: null,
+    createdAt: Date.now()
+  };
+  for (const c of companies) st.ownershipStakes[c.ticker] = { shares: 0, pct: 0, avgCost: 0, bonusPaid: [], acquired: false };
+  return st;
+}
+
+const isNum = v => typeof v === 'number' && isFinite(v);
+
+function migrateTickers(s) {
+  for (const [oldT, newT] of Object.entries(TICKER_RENAMES)) {
+    if (Array.isArray(s.companies)) for (const c of s.companies) if (c && c.ticker === oldT) c.ticker = newT;
+    for (const key of ['portfolio', 'ownershipStakes']) {
+      const m = s[key];
+      if (m && typeof m === 'object' && m[oldT] && !m[newT]) { m[newT] = m[oldT]; delete m[oldT]; }
+    }
+    for (const key of ['hostileTakeovers', 'intel', 'newsFeed']) {
+      if (Array.isArray(s[key])) for (const n of s[key]) if (n && n.ticker === oldT) n.ticker = newT;
+    }
+  }
+}
+
+function validateState(s) {
+  if (!s || typeof s !== 'object') throw new Error('세이브 데이터가 객체가 아닙니다');
+  if (s.version !== SAVE_VERSION) throw new Error('세이브 버전 불일치 (v' + s.version + ')');
+  for (const k of ['day', 'tickCount', 'cash', 'netWorth', 'secHeat', 'politicalFunds', 'darkwebCredits']) {
+    if (!isNum(s[k])) throw new Error('필드 손상: ' + k);
+  }
+  s.day = Math.max(1, Math.floor(s.day));
+  s.tickCount = clamp(Math.floor(s.tickCount), 0, DAY_TICKS - 1);
+  s.secHeat = clamp(s.secHeat, 0, 100);
+  migrateTickers(s);
+  if (!Array.isArray(s.companies)) throw new Error('기업 데이터 손상');
+  const ordered = COMPANY_SPECS.map(spec => {
+    const c = s.companies.find(x => x && x.ticker === spec.ticker);
+    if (!c || !Array.isArray(c.priceHistory) || c.priceHistory.length === 0 || !(c.currentPrice > 0) || !isNum(c.currentPrice) || !(c.sharesOutstanding > 0) || !isNum(c.sharesOutstanding)) {
+      throw new Error('시세 데이터 손상: ' + spec.ticker);
+    }
+    const badCandle = c.priceHistory.some(k => !k || !isNum(k.open) || !isNum(k.high) || !isNum(k.low) || !isNum(k.close) || !(k.close > 0));
+    if (badCandle) throw new Error('캔들 데이터 손상: ' + spec.ticker);
+    // Static fields always come from the spec (also applies renamed company names to old saves).
+    c.name = spec.name; c.sector = spec.sector; c.basePrice = spec.basePrice; c.volatility = spec.volatility;
+    c.pendingEvents = Array.isArray(c.pendingEvents) ? c.pendingEvents.filter(e => e && isNum(e.atTick) && typeof e.kind === 'string') : [];
+    c.activeDrifts = Array.isArray(c.activeDrifts) ? c.activeDrifts.filter(d => d && isNum(d.perTick) && isNum(d.remaining) && d.remaining > 0) : [];
+    if (!(c.anchor > 0) || !isNum(c.anchor)) c.anchor = c.basePrice;
+    if (!(c.dayOpen > 0) || !isNum(c.dayOpen)) c.dayOpen = c.currentPrice;
+    if (!isNum(c.pendingJump) || c.pendingJump < 0) c.pendingJump = 0;
+    updateMAs(c);
+    return c;
+  });
+  s.companies = ordered;
+  if (!s.portfolio || typeof s.portfolio !== 'object') throw new Error('포트폴리오 데이터 손상');
+  for (const [t, p] of Object.entries(s.portfolio)) {
+    if (!COMPANY_META[t] || !p || !(p.shares > 0) || !(p.avgEntryPrice > 0) || !(p.marginUsed > 0) || !isNum(p.shares) || !isNum(p.avgEntryPrice) || !isNum(p.marginUsed) || (p.positionType !== 'long' && p.positionType !== 'short')) {
+      throw new Error('포지션 데이터 손상: ' + t);
+    }
+    if (!(p.leverage > 0) || !isNum(p.leverage)) p.leverage = Math.round(p.shares * p.avgEntryPrice / p.marginUsed * 100) / 100;
+    if (!isNum(p.liquidationPrice)) p.liquidationPrice = liqPriceFor(p.positionType, p.avgEntryPrice, p.shares, p.marginUsed);
+  }
+  if (!s.ownershipStakes || typeof s.ownershipStakes !== 'object') throw new Error('지분 데이터 손상');
+  for (const c of s.companies) {
+    const st = s.ownershipStakes[c.ticker];
+    if (!st || typeof st !== 'object') { s.ownershipStakes[c.ticker] = { shares: 0, pct: 0, avgCost: 0, bonusPaid: [], acquired: false }; continue; }
+    if (!isNum(st.shares) || st.shares < 0) st.shares = 0;
+    if (!isNum(st.avgCost) || st.avgCost < 0) st.avgCost = 0;
+    st.pct = st.shares / c.sharesOutstanding * 100;
+    st.bonusPaid = Array.isArray(st.bonusPaid) ? st.bonusPaid.filter(isNum) : [];
+    st.acquired = !!st.acquired;
+  }
+  if (!Array.isArray(s.hostileTakeovers)) throw new Error('인수 데이터 손상');
+  s.hostileTakeovers = s.hostileTakeovers.filter(h => h && COMPANY_META[h.ticker] && s.ownershipStakes[h.ticker].acquired);
+  if (!['running', 'gameover_seized', 'gameover_bankrupt', 'victory'].includes(s.gameStatus)) throw new Error('게임 상태 손상');
+  // Optional fields: fill defaults for forward compatibility.
+  const cds = Object.assign({ rumor: 0, campaign: 0, breach: 0, lobby: 0 }, s.darkwebCooldowns || {});
+  for (const k of Object.keys(cds)) if (!isNum(cds[k])) cds[k] = 0;
+  s.darkwebCooldowns = cds;
+  if (!Array.isArray(s.newsFeed)) s.newsFeed = [];
+  if (!Array.isArray(s.intel)) s.intel = [];
+  if (!Array.isArray(s.brokerLog)) s.brokerLog = [];
+  s.netWorthHistory = Array.isArray(s.netWorthHistory) ? s.netWorthHistory.filter(p => p && isNum(p.day) && isNum(p.value)) : [];
+  s.newsSeq = s.newsSeq || s.newsFeed.reduce((m, n) => Math.max(m, n.id || 0), 0);
+  s.intelSeq = s.intelSeq || s.intel.reduce((m, n) => Math.max(m, n.id || 0), 0);
+  s.brokerSeq = s.brokerSeq || s.brokerLog.reduce((m, n) => Math.max(m, n.id || 0), 0);
+  const fa = s.frozenAssets;
+  s.frozenAssets = fa && isNum(fa.amount) && fa.amount >= 0 && isNum(fa.releaseDay) ? fa : { amount: 0, releaseDay: 0 };
+  const au = s.audioSettings || {};
+  s.audioSettings = { enabled: au.enabled === undefined ? true : !!au.enabled, masterVolume: isNum(au.masterVolume) ? clamp(au.masterVolume, 0, 1) : 0.5 };
+  s.stats = Object.assign({ trades: 0, liquidations: 0, realizedPnl: 0, darkOps: 0, dividends: 0, fixedIncome: 0 }, s.stats || {});
+  for (const k of Object.keys(s.stats)) if (!isNum(s.stats[k])) s.stats[k] = 0;
+  s.victoryAchieved = !!s.victoryAchieved;
+  return s;
+}
+
+function saveGame() {
+  if (!gameState) return false;
+  try {
+    gameState.lastSavedAt = Date.now();
+    localStorage.setItem(SAVE_KEY, JSON.stringify(gameState));
+    setSaveIndicator(true);
+    runtime.saveFailedNotified = false;
+    return true;
+  } catch (e) {
+    setSaveIndicator(false, e && e.message ? e.message : String(e));
+    return false;
+  }
+}
+function loadGame() {
+  let raw;
+  try {
+    raw = localStorage.getItem(SAVE_KEY);
+  } catch (e) {
+    return { state: null, error: 'LocalStorage에 접근할 수 없습니다 (' + (e && e.message ? e.message : e) + '). 이번 세션은 저장되지 않습니다.' };
+  }
+  if (!raw) return { state: null, error: null };
+  try {
+    return { state: validateState(JSON.parse(raw)), error: null };
+  } catch (e) {
+    return { state: null, error: '저장 데이터를 불러오지 못했습니다: ' + (e && e.message ? e.message : e) + ' — 새 게임을 시작하면 덮어씁니다.' };
+  }
+}
+function setSaveIndicator(ok, err) {
+  const el = $('#saveInd');
+  if (ok) {
+    el.className = 'save-ind ok';
+    el.textContent = 'SAVED ' + new Date(gameState.lastSavedAt).toLocaleTimeString('en-GB');
+    el.title = 'LocalStorage 자동 저장 완료';
+  } else {
+    el.className = 'save-ind fail';
+    el.textContent = 'SAVE FAILED';
+    el.title = err || '';
+    if (!runtime.saveFailedNotified) {
+      runtime.saveFailedNotified = true;
+      toast('자동 저장 실패: ' + (err || '알 수 없는 오류') + ' — 진행 상황이 보존되지 않을 수 있습니다.', 'err', 6000);
+    }
+  }
+}
+
+/* =====================================================================
+ *  MODAL & TOAST
+ * ===================================================================== */
+function showModal({ title, body, buttons = [], cls = '', blocking = true }) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = '<div class="modal ' + cls + '" role="dialog" aria-modal="true"><h2 class="modal-title"></h2><div class="modal-body"></div><div class="modal-actions"></div></div>';
+  overlay.querySelector('.modal-title').textContent = title;
+  const bodyEl = overlay.querySelector('.modal-body');
+  if (typeof body === 'string') bodyEl.innerHTML = body; else if (body) bodyEl.appendChild(body);
+  const actions = overlay.querySelector('.modal-actions');
+  let closed = false;
+  const handle = {
+    overlay, bodyEl, actions,
+    close() {
+      if (closed) return;
+      closed = true;
+      overlay.remove();
+      if (blocking) runtime.blocking = Math.max(0, runtime.blocking - 1);
+    },
+    setButtons(list) {
+      actions.innerHTML = '';
+      list.forEach(b => {
+        const btn = document.createElement('button');
+        btn.className = 'btn ' + (b.cls || '');
+        btn.textContent = b.label;
+        if (b.action) btn.dataset.action = b.action;
+        btn.addEventListener('click', () => {
+          if (!b.keepOpen) handle.close();
+          if (b.onClick) b.onClick(handle);
+        });
+        actions.appendChild(btn);
+      });
+      const first = actions.querySelector('button');
+      if (first) first.focus();
+    }
+  };
+  handle.setButtons(buttons);
+  $('#modalRoot').appendChild(overlay);
+  if (blocking) runtime.blocking++;
+  return handle;
+}
+function toast(msg, kind = 'info', ms = 3600) {
+  const root = $('#toastRoot');
+  const el = document.createElement('div');
+  el.className = 'toast ' + kind;
+  el.textContent = msg;
+  root.appendChild(el);
+  while (root.children.length > 5) root.firstChild.remove();
+  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 320); }, ms);
+}
+
+/* =====================================================================
+ *  [1] MARKET LIST UI  +  [2] CANVAS CANDLESTICK CHART
+ * ===================================================================== */
+function buildStaticUI() {
+  // Market table rows (fixed company order)
+  const body = $('#marketBody');
+  body.innerHTML = '';
+  for (const spec of COMPANY_SPECS) {
+    const tr = document.createElement('tr');
+    tr.className = 'clickable';
+    tr.dataset.key = spec.ticker;
+    tr.dataset.action = 'select-ticker';
+    tr.dataset.ticker = spec.ticker;
+    tr.innerHTML =
+      '<td><div class="co-cell"><span class="co-logo">' + logoOf(spec.ticker) + '</span>' +
+      '<div class="co-name"><b>' + escapeHtml(spec.ticker) + '</b><span class="sector-pill">' + escapeHtml(spec.sector) + '</span>' +
+      '<small>' + escapeHtml(spec.name) + '</small></div></div></td>' +
+      '<td class="num" data-f="price">-</td><td class="num" data-f="chg">-</td>' +
+      '<td class="num" data-f="cap">-</td><td class="num" data-f="stake">-</td>';
+    body.appendChild(tr);
+  }
+  // Ticker selects
+  const optionsHtml = COMPANY_SPECS.map(s => '<option value="' + s.ticker + '">' + logoOf(s.ticker) + ' ' + s.ticker + ' — ' + escapeHtml(s.name) + '</option>').join('');
+  for (const id of ['#orderTicker', '#mnaTicker', '#dwRumorTarget', '#dwCampTarget', '#dwBreachTarget']) $(id).innerHTML = optionsHtml;
+  // M&A ownership rows
+  const mb = $('#mnaBody');
+  mb.innerHTML = '';
+  for (const spec of COMPANY_SPECS) {
+    const tr = document.createElement('tr');
+    tr.className = 'clickable';
+    tr.dataset.key = spec.ticker;
+    tr.dataset.action = 'select-ticker';
+    tr.dataset.ticker = spec.ticker;
+    tr.innerHTML =
+      '<td><div class="co-cell"><span class="co-logo">' + logoOf(spec.ticker) + '</span><div class="co-name"><b>' + spec.ticker + '</b><small>' + escapeHtml(spec.name) + '</small></div></div></td>' +
+      '<td class="num" data-f="price">-</td><td class="num" data-f="cap">-</td>' +
+      '<td><span class="stake-bar" data-f="bar"><i></i></span> <span class="mono small" data-f="pct">0%</span></td>' +
+      '<td class="num" data-f="value">-</td><td data-f="status">-</td>';
+    mb.appendChild(tr);
+  }
+}
+
+function renderHeader() {
+  const st = gameState;
+  if (!st) return;
+  setText($('#hdrDay'), String(st.day));
+  $('#hdrDayProg').style.width = (st.tickCount / DAY_TICKS * 100).toFixed(1) + '%';
+  setText($('#hdrCash'), fmtCredits(st.cash));
+  const net = $('#hdrNet');
+  setText(net, fmtCredits(st.netWorth));
+  setTone(net, st.netWorth - START_CASH);
+  const heat = st.secHeat;
+  setText($('#hdrHeatPct'), heat.toFixed(1) + '%');
+  $('#hdrHeatFill').style.width = heat.toFixed(1) + '%';
+  $('#hdrHeatBox').classList.toggle('hot', heat >= 75);
+  setText($('#hdrDC'), fmtNum(st.darkwebCredits, 0) + ' DC');
+  setText($('#hdrPF'), fmtNum(st.politicalFunds, 0) + ' PF');
+  const nPos = Object.keys(st.portfolio).length;
+  const badge = $('#badgePos');
+  badge.hidden = nPos === 0;
+  setText(badge, String(nPos));
+  setText($('#feedClock'), 'D' + st.day + ' · T' + st.tickCount + '/' + DAY_TICKS);
+}
+
+function renderMarket() {
+  const st = gameState;
+  for (const tr of $('#marketBody').children) {
+    const c = getCompany(tr.dataset.key);
+    if (!c) continue;
+    const chg = (c.currentPrice - c.dayOpen) / c.dayOpen;
+    setText(tr.querySelector('[data-f="price"]'), fmtPrice(c.currentPrice));
+    const chgEl = tr.querySelector('[data-f="chg"]');
+    setText(chgEl, fmtPct(chg));
+    setTone(chgEl, chg);
+    setText(tr.querySelector('[data-f="cap"]'), '₵' + fmtCompact(marketCap(c)));
+    const s = st.ownershipStakes[c.ticker];
+    const stakeEl = tr.querySelector('[data-f="stake"]');
+    setText(stakeEl, s.acquired ? '👑 ' + s.pct.toFixed(1) + '%' : s.pct > 0 ? s.pct.toFixed(1) + '%' : '—');
+    stakeEl.classList.toggle('up', s.acquired);
+    const prev = runtime.prevPrices.get(c.ticker);
+    if (prev !== undefined && prev !== c.currentPrice) {
+      tr.classList.remove('flash-up', 'flash-down');
+      void tr.offsetWidth; // restart CSS animation
+      tr.classList.add(c.currentPrice > prev ? 'flash-up' : 'flash-down');
+    }
+    runtime.prevPrices.set(c.ticker, c.currentPrice);
+    tr.classList.toggle('selected', c.ticker === runtime.selected);
+  }
+}
+
+function todayRange(c) {
+  let hi = -Infinity, lo = Infinity;
+  for (const k of c.priceHistory) {
+    if (k.day !== gameState.day) continue;
+    if (k.high > hi) hi = k.high;
+    if (k.low < lo) lo = k.low;
+  }
+  if (!isFinite(hi)) { hi = c.currentPrice; lo = c.currentPrice; }
+  return { hi, lo };
+}
+
+function renderChartHeader() {
+  if (!gameState) return;
+  const c = getCompany(runtime.selected);
+  if (!c) return;
+  setText($('#chLogo'), logoOf(c.ticker));
+  setText($('#chTicker'), c.ticker);
+  setText($('#chName'), c.name);
+  setText($('#chSector'), c.sector + ' · 변동성 σ ' + (c.volatility * 100).toFixed(1) + '% · 발행주식 ' + fmtCompact(c.sharesOutstanding));
+  setText($('#chPrice'), '₵' + fmtPrice(c.currentPrice));
+  const chg = (c.currentPrice - c.dayOpen) / c.dayOpen;
+  const chEl = $('#chChange');
+  setText(chEl, fmtPct(chg) + ' today');
+  setTone(chEl, chg);
+  const r = todayRange(c);
+  setText($('#chOpen'), fmtPrice(c.dayOpen));
+  setText($('#chHigh'), fmtPrice(r.hi));
+  setText($('#chLow'), fmtPrice(r.lo));
+  setText($('#chMa5'), fmtPrice(c.ma5));
+  setText($('#chMa20'), fmtPrice(c.ma20));
+  setText($('#chCap'), '₵' + fmtCompact(marketCap(c)));
+}
+
+const CC = {
+  bg: '#06050c', grid: 'rgba(59,51,117,.38)', text: '#8e87bd', day: 'rgba(157,107,255,.5)', dayText: '#9d6bff',
+  up: '#19ff9c', down: '#ff3b6b', ma5: '#f7ff4a', ma20: '#ff2bd6', entry: '#00f0ff', liq: '#ff9f1c',
+  mono: '"Cascadia Mono", Consolas, Menlo, monospace'
+};
+
+function drawChart() {
+  if (!gameState) return;
+  const canvas = $('#chartCanvas');
+  if (!canvas.isConnected || canvas.offsetParent === null) return; // not visible
+  const cssW = canvas.clientWidth, cssH = canvas.clientHeight;
+  if (cssW < 60 || cssH < 60) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const W = Math.round(cssW * dpr), H = Math.round(cssH * dpr);
+  if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = CC.bg;
+  ctx.fillRect(0, 0, cssW, cssH);
+
+  const c = getCompany(runtime.selected);
+  if (!c) return;
+  const hist = c.priceHistory;
+  const padL = 6, padR = 68, padT = 16, padB = 22;
+  const plotW = cssW - padL - padR, plotH = cssH - padT - padB;
+  const step = cssW < 480 ? 6 : 8;
+  const count = Math.min(hist.length, Math.max(10, Math.floor(plotW / step)));
+  const start = hist.length - count;
+  const vis = hist.slice(start);
+  const ma5 = [], ma20 = [];
+  for (let i = 0; i < vis.length; i++) { ma5.push(maAt(hist, start + i, 5)); ma20.push(maAt(hist, start + i, 20)); }
+
+  let lo = Infinity, hi = -Infinity;
+  for (const k of vis) { if (k.low < lo) lo = k.low; if (k.high > hi) hi = k.high; }
+  for (const v of ma5.concat(ma20)) { if (v === null) continue; if (v < lo) lo = v; if (v > hi) hi = v; }
+  const pos = gameState.portfolio[c.ticker];
+  if (pos) {
+    const span = hi - lo;
+    for (const p of [pos.avgEntryPrice, pos.liquidationPrice]) {
+      if (p > lo - span * 0.6 && p < hi + span * 0.6) { lo = Math.min(lo, p); hi = Math.max(hi, p); }
+    }
+  }
+  const padRange = (hi - lo) * 0.08 || hi * 0.01;
+  lo -= padRange; hi += padRange;
+  const y = p => padT + (hi - p) / (hi - lo) * plotH;
+  const cw = plotW / count;
+  const bw = Math.max(1, cw * 0.62);
+
+  // watermark
+  ctx.fillStyle = 'rgba(0,240,255,.055)';
+  ctx.font = 'bold ' + Math.round(Math.min(56, cssW / 8)) + 'px ' + CC.mono;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+  ctx.fillText(c.ticker, padL + plotW - 8, padT + plotH - 4);
+
+  // grid + price axis
+  ctx.font = '11px ' + CC.mono;
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  for (let g = 0; g <= 5; g++) {
+    const p = lo + (hi - lo) * g / 5;
+    const yy = Math.round(y(p)) + 0.5;
+    ctx.strokeStyle = CC.grid; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(padL + plotW, yy); ctx.stroke();
+    ctx.fillStyle = CC.text;
+    ctx.fillText(fmtPrice(p), padL + plotW + 6, yy);
+  }
+  // day separators
+  ctx.textBaseline = 'top';
+  for (let i = 1; i < vis.length; i++) {
+    if (vis[i].day === vis[i - 1].day) continue;
+    const xx = Math.round(padL + i * cw) + 0.5;
+    ctx.setLineDash([3, 4]); ctx.strokeStyle = CC.day;
+    ctx.beginPath(); ctx.moveTo(xx, padT); ctx.lineTo(xx, padT + plotH); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = CC.dayText;
+    ctx.fillText('D' + vis[i].day, xx + 3, padT + plotH + 5);
+  }
+  // candles
+  for (let i = 0; i < vis.length; i++) {
+    const k = vis[i];
+    const x = padL + (i + 0.5) * cw;
+    const isUp = k.close >= k.open;
+    const col = isUp ? CC.up : CC.down;
+    const last = i === vis.length - 1;
+    if (last) { ctx.shadowColor = col; ctx.shadowBlur = 12; }
+    ctx.strokeStyle = col; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(Math.round(x) + 0.5, y(k.high)); ctx.lineTo(Math.round(x) + 0.5, y(k.low)); ctx.stroke();
+    const top = y(Math.max(k.open, k.close));
+    const h = Math.max(1, y(Math.min(k.open, k.close)) - top);
+    ctx.fillStyle = col;
+    ctx.fillRect(x - bw / 2, top, bw, h);
+    if (last) { ctx.shadowBlur = 0; }
+  }
+  // moving averages
+  const drawMA = (arr, color) => {
+    ctx.strokeStyle = color; ctx.lineWidth = 1.6; ctx.beginPath();
+    let penDown = false;
+    arr.forEach((v, i) => {
+      if (v === null) { penDown = false; return; }
+      const x = padL + (i + 0.5) * cw, yy = y(v);
+      if (!penDown) { ctx.moveTo(x, yy); penDown = true; } else ctx.lineTo(x, yy);
+    });
+    ctx.stroke();
+  };
+  drawMA(ma20, CC.ma20);
+  drawMA(ma5, CC.ma5);
+
+  // horizontal marker helper
+  const hLine = (price, color, label) => {
+    if (price < lo || price > hi) return;
+    const yy = Math.round(y(price)) + 0.5;
+    ctx.setLineDash([6, 4]); ctx.strokeStyle = color; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(padL + plotW, yy); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = 'bold 10px ' + CC.mono; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    const tw = ctx.measureText(label).width + 8;
+    ctx.fillStyle = color; ctx.fillRect(padL + 2, yy - 7, tw, 14);
+    ctx.fillStyle = '#05040a'; ctx.fillText(label, padL + 6, yy);
+  };
+  if (pos) {
+    hLine(pos.avgEntryPrice, CC.entry, (pos.positionType === 'long' ? 'LONG ' : 'SHORT ') + pos.leverage + 'x ENTRY ' + fmtPrice(pos.avgEntryPrice));
+    hLine(pos.liquidationPrice, CC.liq, 'LIQ ' + fmtPrice(pos.liquidationPrice));
+  }
+  // last price tag
+  const lastUp = c.currentPrice >= c.dayOpen;
+  const lcol = lastUp ? CC.up : CC.down;
+  const ly = Math.round(y(c.currentPrice)) + 0.5;
+  ctx.setLineDash([2, 3]); ctx.strokeStyle = lcol;
+  ctx.beginPath(); ctx.moveTo(padL, ly); ctx.lineTo(padL + plotW, ly); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = lcol;
+  ctx.fillRect(padL + plotW + 1, ly - 9, padR - 3, 18);
+  ctx.fillStyle = '#05040a'; ctx.font = 'bold 11px ' + CC.mono; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(fmtPrice(c.currentPrice), padL + plotW + 5, ly);
+
+  // hover crosshair + OHLC readout
+  if (runtime.hoverX !== null) {
+    const idx = Math.floor((runtime.hoverX - padL) / cw);
+    if (idx >= 0 && idx < vis.length) {
+      const k = vis[idx];
+      const x = Math.round(padL + (idx + 0.5) * cw) + 0.5;
+      ctx.strokeStyle = 'rgba(232,229,255,.35)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + plotH); ctx.stroke();
+      const chg = (k.close - k.open) / k.open;
+      const txt = 'D' + k.day + ' T' + k.tick + '  O ' + fmtPrice(k.open) + '  H ' + fmtPrice(k.high) + '  L ' + fmtPrice(k.low) + '  C ' + fmtPrice(k.close) + '  ' + fmtPct(chg);
+      ctx.font = '11px ' + CC.mono; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      const tw = Math.min(ctx.measureText(txt).width + 12, plotW);
+      ctx.fillStyle = 'rgba(15,12,29,.92)'; ctx.fillRect(padL + 4, padT - 12, tw, 18);
+      ctx.strokeStyle = CC.grid; ctx.strokeRect(padL + 4.5, padT - 11.5, tw - 1, 17);
+      ctx.fillStyle = chg >= 0 ? CC.up : CC.down;
+      ctx.fillText(txt, padL + 10, padT - 9, plotW - 12);
+    }
+  }
+}
+
+/* =====================================================================
+ *  SHARED HELPERS (keyed table rows, time, shocks, post-action refresh)
+ * ===================================================================== */
+function absTick() { return (gameState.day - 1) * DAY_TICKS + gameState.tickCount; }
+function fld(tr, name) { return tr.querySelector('[data-f="' + name + '"]'); }
+// Update table rows in place (keyed) so buttons are not recreated under the cursor every tick.
+function syncRows(body, keys, create, update) {
+  const existing = new Map(Array.from(body.children).map(tr => [tr.dataset.key, tr]));
+  keys.forEach((k, i) => {
+    let tr = existing.get(k);
+    if (!tr) { tr = create(k); tr.dataset.key = k; }
+    existing.delete(k);
+    if (body.children[i] !== tr) body.insertBefore(tr, body.children[i] || null);
+    update(tr, k);
+  });
+  for (const tr of existing.values()) tr.remove();
+}
+function setHtmlOnce(el, key, html) {
+  if (el.dataset.v === key) return;
+  el.dataset.v = key;
+  el.innerHTML = html;
+}
+// Price shock: part as an immediate jump on the next candle, the rest as a short drift.
+function applyShock(c, pct, driftShare = 0.3, driftTicks = 8) {
+  const jumpPart = pct * (1 - driftShare);
+  c.pendingJump = (c.pendingJump || 1) * Math.max(0.2, 1 + jumpPart);
+  if (driftShare > 0) c.activeDrifts.push({ perTick: Math.log(Math.max(0.2, 1 + pct * driftShare)) / driftTicks, remaining: driftTicks });
+}
+// Market impact from M&A accumulation / selling: moves the live price and patches the current candle.
+function applyImpact(c, newPrice) {
+  newPrice = Math.max(0.5, r4(newPrice));
+  const ratio = newPrice / c.currentPrice;
+  c.anchor *= 1 + (ratio - 1) * 0.5;
+  c.currentPrice = newPrice;
+  const last = c.priceHistory[c.priceHistory.length - 1];
+  if (last) {
+    last.close = newPrice;
+    last.high = Math.max(last.high, newPrice);
+    last.low = Math.min(last.low, newPrice);
+  }
+  updateMAs(c);
+}
+function afterAction() {
+  recalcNetWorth();
+  renderHeader();
+  renderActiveTab();
+  if (runtime.tab === 'market' || runtime.tab === 'trading') drawChart();
+  saveGame();
+  checkEndConditions();
+}
+
+/* =====================================================================
+ *  [3] TRADING DESK (Long / Short, 1~5x leverage, liquidation)
+ * ===================================================================== */
+function liqPriceFor(type, entry, shares, margin) {
+  const d = MAINT_LOSS * margin / shares;
+  return r4(type === 'long' ? Math.max(0, entry - d) : entry + d);
+}
+function positionPnl(p, price) {
+  return p.positionType === 'long' ? p.shares * (price - p.avgEntryPrice) : p.shares * (p.avgEntryPrice - price);
+}
+function positionEquity(p, price) { return Math.max(0, p.marginUsed + positionPnl(p, price)); }
+function positionsEquity() {
+  let sum = 0;
+  for (const [t, p] of Object.entries(gameState.portfolio)) sum += positionEquity(p, getCompany(t).currentPrice);
+  return sum;
+}
+function readTicket() {
+  const margin = Number($('#orderMargin').value);
+  const lev = clamp(Math.round(Number($('#orderLev').value) || 1), 1, 5);
+  return { margin: isFinite(margin) ? margin : 0, lev };
+}
+function openFromTicket(dir) {
+  if (!requireRunning()) return;
+  const st = gameState;
+  const c = getCompany(runtime.selected);
+  if (!c) return;
+  const { margin, lev } = readTicket();
+  if (!(margin >= 10)) { toast('증거금은 ₵10 이상이어야 합니다.', 'warn'); return; }
+  const price = c.currentPrice;
+  const notional = margin * lev;
+  const fee = notional * TRADE_FEE;
+  if (margin + fee > st.cash + 1e-6) { toast('현금 부족 — 증거금 + 수수료 ' + fmtCredits(margin + fee) + ' 필요', 'warn'); return; }
+  const existing = st.portfolio[c.ticker];
+  if (existing && existing.positionType !== dir) {
+    toast(c.ticker + ' 반대 방향(' + existing.positionType.toUpperCase() + ') 포지션 보유 중 — 먼저 청산하세요.', 'warn');
+    return;
+  }
+  const shares = notional / price;
+  st.cash -= margin + fee;
+  if (existing) {
+    const totShares = existing.shares + shares;
+    existing.avgEntryPrice = r4((existing.shares * existing.avgEntryPrice + shares * price) / totShares);
+    existing.shares = totShares;
+    existing.marginUsed += margin;
+    existing.leverage = Math.round(existing.shares * existing.avgEntryPrice / existing.marginUsed * 100) / 100;
+    existing.liquidationPrice = liqPriceFor(dir, existing.avgEntryPrice, existing.shares, existing.marginUsed);
+  } else {
+    st.portfolio[c.ticker] = {
+      positionType: dir, shares, avgEntryPrice: price, marginUsed: margin, leverage: lev,
+      liquidationPrice: liqPriceFor(dir, price, shares, margin), openedDay: st.day
+    };
+  }
+  st.stats.trades++;
+  sfx.fill();
+  toast((dir === 'long' ? '▲ LONG ' : '▼ SHORT ') + c.ticker + ' ' + lev + 'x 체결 — ' + fmtShares(shares) + '주 @ ₵' + fmtPrice(price) + ' (수수료 ' + fmtCredits(fee) + ')', 'ok');
+  afterAction();
+}
+function closePosition(ticker, frac) {
+  if (!requireRunning()) return;
+  const st = gameState;
+  const p = st.portfolio[ticker];
+  const c = getCompany(ticker);
+  if (!p || !c) { toast(ticker + ' 보유 포지션이 없습니다.', 'warn'); return; }
+  frac = clamp(Number(frac) || 1, 0.01, 1);
+  const q = frac >= 1 ? p.shares : p.shares * frac;
+  const price = c.currentPrice;
+  const pnlPart = positionPnl(p, price) * (q / p.shares);
+  const marginPart = p.marginUsed * (q / p.shares);
+  const fee = q * price * TRADE_FEE;
+  const payout = Math.max(0, marginPart + pnlPart - fee);
+  const realized = payout - marginPart;
+  st.cash += payout;
+  st.stats.realizedPnl += realized;
+  st.stats.trades++;
+  if (frac >= 1 || p.shares - q < 1e-6) {
+    delete st.portfolio[ticker];
+  } else {
+    p.shares -= q;
+    p.marginUsed -= marginPart; // liquidation price is unchanged (margin and size scale together)
+  }
+  sfx.fill();
+  toast(ticker + ' ' + (frac >= 1 ? '전량' : Math.round(frac * 100) + '%') + ' 청산 — 실현손익 ' + fmtSigned(realized), realized >= 0 ? 'ok' : 'warn');
+  afterAction();
+}
+function checkLiquidations() {
+  const st = gameState;
+  for (const [t, p] of Object.entries(st.portfolio)) {
+    const c = getCompany(t);
+    const price = c.currentPrice;
+    const hit = p.positionType === 'long' ? price <= p.liquidationPrice : price >= p.liquidationPrice;
+    if (!hit) continue;
+    const fee = p.shares * price * TRADE_FEE;
+    const payout = Math.max(0, p.marginUsed + positionPnl(p, price) - fee);
+    st.cash += payout;
+    st.stats.realizedPnl += payout - p.marginUsed;
+    st.stats.liquidations++;
+    delete st.portfolio[t];
+    addNews({ headline: '⚠ LIQUIDATION — ' + t + ' ' + p.positionType.toUpperCase() + ' ' + p.leverage + 'x 강제청산 @ ₵' + fmtPrice(price) + ' · 잔여 증거금 ' + fmtCredits(payout) + ' 반환', tag: 'SYSTEM', ticker: t, impact: 'down' });
+    toast('💥 ' + t + ' 포지션 강제청산! 손실 ' + fmtSigned(payout - p.marginUsed), 'err', 5000);
+    sfx.liquidation();
+  }
+}
+function setMarginPct(pct) {
+  if (!gameState) return;
+  const { lev } = readTicket();
+  const m = Math.floor(gameState.cash * clamp(pct, 0, 1) / (1 + lev * TRADE_FEE));
+  $('#orderMargin').value = String(Math.max(0, m));
+  renderOrderPanel();
+}
+function renderOrderPanel() {
+  if (!gameState) return;
+  const st = gameState;
+  const c = getCompany(runtime.selected);
+  if (!c) return;
+  const sel = $('#orderTicker');
+  if (sel.value !== c.ticker) sel.value = c.ticker;
+  const { margin, lev } = readTicket();
+  const price = c.currentPrice;
+  setText($('#orderLevLabel'), lev + 'x');
+  setText($('#orderPrice'), '₵' + fmtPrice(price));
+  setText($('#orderCash'), fmtCredits(st.cash));
+  const notional = Math.max(0, margin) * lev;
+  setText($('#pvNotional'), fmtCredits(notional));
+  setText($('#pvShares'), fmtShares(notional / price));
+  setText($('#pvFee'), fmtCredits(notional * TRADE_FEE));
+  setText($('#pvLiq'), fmtPrice(Math.max(0, price * (1 - MAINT_LOSS / lev))) + ' / ' + fmtPrice(price * (1 + MAINT_LOSS / lev)));
+  const running = isRunning();
+  $$('[data-action="open-long"], [data-action="open-short"]').forEach(b => { b.disabled = !running; });
+  const p = st.portfolio[c.ticker];
+  const box = $('#orderPosBox');
+  box.hidden = !p;
+  if (p) {
+    const pnl = positionPnl(p, price);
+    const typeEl = $('#opbType');
+    setText(typeEl, (p.positionType === 'long' ? 'LONG ▲ ' : 'SHORT ▼ ') + p.leverage + 'x');
+    setTone(typeEl, p.positionType === 'long' ? 1 : -1);
+    setText($('#opbEntry'), '₵' + fmtPrice(p.avgEntryPrice) + ' × ' + fmtShares(p.shares));
+    setText($('#opbLiq'), '₵' + fmtPrice(p.liquidationPrice));
+    const pnlEl = $('#opbPnl');
+    setText(pnlEl, fmtSigned(pnl) + ' (' + fmtPct(pnl / p.marginUsed, 1) + ')');
+    setTone(pnlEl, pnl);
+    box.querySelectorAll('button').forEach(b => { b.disabled = !running; });
+  }
+}
+function renderPositions(bodySel, emptySel) {
+  if (!gameState) return;
+  const st = gameState;
+  const body = $(bodySel);
+  const keys = Object.keys(st.portfolio);
+  $(emptySel).hidden = keys.length > 0;
+  const running = isRunning();
+  let totMargin = 0, totPnl = 0;
+  syncRows(body, keys, k => {
+    const tr = document.createElement('tr');
+    tr.className = 'clickable';
+    tr.dataset.action = 'select-ticker';
+    tr.dataset.ticker = k;
+    tr.innerHTML =
+      '<td><span class="mono">' + logoOf(k) + ' <b>' + escapeHtml(k) + '</b></span></td><td data-f="dir"></td>' +
+      '<td class="num" data-f="lev"></td><td class="num" data-f="qty"></td><td class="num" data-f="entry"></td>' +
+      '<td class="num" data-f="px"></td><td class="num" data-f="liq"></td><td class="num" data-f="margin"></td><td class="num" data-f="pnl"></td>' +
+      '<td class="num"><button class="btn btn-sm" data-action="close-pos" data-ticker="' + escapeHtml(k) + '" data-frac="0.5">50%</button> ' +
+      '<button class="btn btn-sm btn-danger" data-action="close-pos" data-ticker="' + escapeHtml(k) + '" data-frac="1">Close</button></td>';
+    return tr;
+  }, (tr, k) => {
+    const p = st.portfolio[k];
+    const c = getCompany(k);
+    const pnl = positionPnl(p, c.currentPrice);
+    totMargin += p.marginUsed; totPnl += pnl;
+    const dirEl = fld(tr, 'dir');
+    setText(dirEl, p.positionType === 'long' ? 'LONG ▲' : 'SHORT ▼');
+    setTone(dirEl, p.positionType === 'long' ? 1 : -1);
+    setText(fld(tr, 'lev'), p.leverage + 'x');
+    setText(fld(tr, 'qty'), fmtShares(p.shares));
+    setText(fld(tr, 'entry'), fmtPrice(p.avgEntryPrice));
+    setText(fld(tr, 'px'), fmtPrice(c.currentPrice));
+    setText(fld(tr, 'liq'), fmtPrice(p.liquidationPrice));
+    setText(fld(tr, 'margin'), fmtCredits(p.marginUsed));
+    const pnlEl = fld(tr, 'pnl');
+    setText(pnlEl, fmtSigned(pnl) + ' (' + fmtPct(pnl / p.marginUsed, 1) + ')');
+    setTone(pnlEl, pnl);
+    tr.classList.toggle('selected', k === runtime.selected);
+    tr.querySelectorAll('button').forEach(b => { b.disabled = !running; });
+  });
+  if (bodySel === '#tradePosBody') {
+    setText($('#tradePosSummary'), keys.length ? keys.length + ' pos · 증거금 ' + fmtCredits(totMargin) + ' · PnL ' + fmtSigned(totPnl) : '');
+  }
+}
+
+/* =====================================================================
+ *  [4] DARKNET (rumors, campaigns, Firewall Breach, lobbying)
+ *  All actions are abstract stat exchanges — no real-world procedures.
+ * ===================================================================== */
+const POS_HEADLINES = [
+  '{n}, 분기 실적 컨센서스 상회 — "Beat & Raise"',
+  '{n}, 메가코프 연합과 대형 공급 계약 체결',
+  '{n}, 차세대 {s} 플랫폼 공개 — 업계 호평',
+  '{n}, 대규모 자사주 매입 프로그램 발표',
+  '{n}, 네오시티 의회 인증 획득 — 신규 시장 진입'
+];
+const NEG_HEADLINES = [
+  '{n}, 생산 라인 화재로 출하 차질',
+  '{n}, 핵심 임원 돌연 사임 — 경영 공백 우려',
+  '{n}, 대규모 제품 리콜 발표',
+  '{n}, 분기 가이던스 하향 조정',
+  '{n}, 대형 고객사 계약 해지 통보'
+];
+const SECTOR_POS = ['{s} 섹터에 훈풍 — 네오시티 의회 보조금 확대안 통과', '{s} 섹터 수요 급증 — 메가코프 발주 러시', '{s} 업종 규제 완화 기대감 확산'];
+const SECTOR_NEG = ['{s} 섹터 악재 — 원자재 가격 급등', '{s} 업종 전반 감사 강화 방침 발표', '{s} 섹터 수요 둔화 경고'];
+const FLAVOR_NEWS = [
+  '네오시티 중앙은행, 기준금리 동결 — "Neon Dollar 안정 최우선"',
+  'Grid Authority: 7구역 정전 복구 완료',
+  '메가코프 연합, 연례 비공개 회의 개최',
+  '네오시티 교통국, 자기부상 노선 3호선 확장 발표',
+  '하층 구역 데이터 요금 인상 — 시민 반발'
+];
+function fillTpl(tpl, c, sector) { return tpl.replace('{n}', c ? c.name : '').replace('{s}', sector || (c ? c.sector : '')); }
+
+function dcPackCost() { return Math.max(1500, Math.round(gameState.netWorth * 0.015 / 10) * 10); }
+function pfPackCost() { return Math.max(2500, Math.round(gameState.netWorth * 0.025 / 10) * 10); }
+function cooldownLeft(key) { return Math.max(0, Math.ceil((gameState.darkwebCooldowns[key] || 0) - absTick())); }
+function startCooldown(key, ticks) { gameState.darkwebCooldowns[key] = absTick() + ticks; }
+
+function brokerSay(who, text) {
+  const st = gameState;
+  if (!st) return;
+  st.brokerLog.push({ id: ++st.brokerSeq, who, text, day: st.day, tick: st.tickCount });
+  if (st.brokerLog.length > BROKER_LOG_CAP) st.brokerLog.splice(0, st.brokerLog.length - BROKER_LOG_CAP);
+  renderBrokerLog();
+}
+function renderBrokerLog(full) {
+  if (!gameState) return;
+  const log = gameState.brokerLog;
+  const lastId = log.length ? log[log.length - 1].id : 0;
+  if (!full && lastId === runtime.renderedLogId) return;
+  const ul = $('#brokerLog');
+  ul.innerHTML = '';
+  for (let i = log.length - 1; i >= 0; i--) {
+    const m = log[i];
+    const li = document.createElement('li');
+    const when = document.createElement('span'); when.className = 'when'; when.textContent = 'D' + m.day + ' T' + m.tick;
+    const who = document.createElement('span'); who.className = 'who'; who.textContent = String(m.who);
+    li.append(when, who, document.createTextNode(': ' + String(m.text)));
+    ul.appendChild(li);
+  }
+  if (!log.length) ul.innerHTML = '<li class="muted">채널 대기 중…</li>';
+  runtime.renderedLogId = lastId;
+}
+
+function buyDarkCredits() {
+  if (!requireRunning()) return;
+  const st = gameState, cost = dcPackCost();
+  if (st.cash < cost) { toast('현금 부족 — ' + fmtCredits(cost) + ' 필요', 'warn'); return; }
+  st.cash -= cost;
+  st.darkwebCredits += DC_PACK;
+  sfx.fill();
+  toast('+' + DC_PACK + ' DC 환전 완료 (' + fmtCredits(cost) + ')', 'ok');
+  afterAction();
+}
+function buyPoliticalFunds() {
+  if (!requireRunning()) return;
+  const st = gameState, cost = pfPackCost();
+  if (st.cash < cost) { toast('현금 부족 — ' + fmtCredits(cost) + ' 필요', 'warn'); return; }
+  st.cash -= cost;
+  st.politicalFunds += PF_PACK;
+  sfx.fill();
+  toast('정치자금 +' + PF_PACK + ' PF 조성 (' + fmtCredits(cost) + ')', 'ok');
+  afterAction();
+}
+function buyRumor() {
+  if (!requireRunning()) return;
+  const st = gameState;
+  const c = getCompany($('#dwRumorTarget').value);
+  if (!c) return;
+  const left = cooldownLeft('rumor');
+  if (left > 0) { toast('루머 채널 쿨다운 ' + left + 's', 'warn'); return; }
+  if (st.darkwebCredits < RUMOR.cost) { toast('Dark Credits 부족 — ' + RUMOR.cost + ' DC 필요', 'warn'); return; }
+  st.darkwebCredits -= RUMOR.cost;
+  startCooldown('rumor', RUMOR.cooldown);
+  st.stats.darkOps++;
+  const claim = Math.random() < 0.5 ? 'up' : 'down';
+  const reliability = randInt(RUMOR.relMin, RUMOR.relMax);
+  const accurate = Math.random() * 100 < reliability;
+  const actual = accurate ? claim : (Math.random() < 0.5 ? (claim === 'up' ? 'down' : 'up') : 'none');
+  const broker = pick(BROKERS);
+  const intelId = ++st.intelSeq;
+  st.intel.push({ id: intelId, ticker: c.ticker, claim, reliability, day: st.day + 1, broker, result: 'pending' });
+  if (st.intel.length > INTEL_CAP) st.intel.splice(0, st.intel.length - INTEL_CAP);
+  // Scheduled for a random tick of the next game day.
+  c.pendingEvents.push({ atTick: st.day * DAY_TICKS + randInt(10, 60), kind: 'rumor', dir: actual, mag: rand(0.06, 0.12), intelId });
+  addHeat(rand(RUMOR.heatMin, RUMOR.heatMax));
+  brokerSay(broker, c.ticker + ' — 익일 ' + (claim === 'up' ? '호재' : '악재') + ' 예고. 신뢰도 ' + reliability + '%. 판단은 네 몫이야.');
+  sfx.fill();
+  toast('📡 정보 구매 완료 — ' + c.ticker + ' D' + (st.day + 1) + ' ' + (claim === 'up' ? '호재' : '악재') + ' 예고 (' + reliability + '%)', 'ok');
+  afterAction();
+}
+function launchCampaign() {
+  if (!requireRunning()) return;
+  const st = gameState;
+  const c = getCompany($('#dwCampTarget').value);
+  if (!c) return;
+  const dirEl = $('input[name="campDir"]:checked');
+  const dir = dirEl && dirEl.value === 'dump' ? 'down' : 'up';
+  const scaleKey = CAMPAIGN_SCALES[$('#dwCampScale').value] ? $('#dwCampScale').value : 'medium';
+  const sc = CAMPAIGN_SCALES[scaleKey];
+  const left = cooldownLeft('campaign');
+  if (left > 0) { toast('캠페인 쿨다운 ' + left + 's', 'warn'); return; }
+  if (st.darkwebCredits < sc.cost) { toast('Dark Credits 부족 — ' + sc.cost + ' DC 필요', 'warn'); return; }
+  st.darkwebCredits -= sc.cost;
+  startCooldown('campaign', CAMPAIGN.cooldown);
+  st.stats.darkOps++;
+  const delay = randInt(6, 15);
+  c.pendingEvents.push({ atTick: absTick() + delay, kind: 'campaign', dir, mag: sc.mag, detect: sc.detect });
+  addHeat(sc.heat);
+  brokerSay(pick(BROKERS), c.ticker + ' ' + (dir === 'up' ? 'PUMP' : 'DUMP') + ' 캠페인 접수. 약 ' + delay + '틱 뒤 피드에 반영돼.');
+  sfx.fill();
+  toast('📣 캠페인 가동 — ' + c.ticker + ' ' + (dir === 'up' ? 'PUMP' : 'DUMP') + ' (' + scaleKey + ')', 'ok');
+  afterAction();
+}
+function freezeCash(frac, days) {
+  const st = gameState;
+  const amt = Math.max(0, st.cash * frac);
+  st.cash -= amt;
+  st.frozenAssets.amount += amt;
+  st.frozenAssets.releaseDay = Math.max(st.frozenAssets.releaseDay, st.day + days);
+  return amt;
+}
+function processScheduledEvents() {
+  const now = absTick();
+  for (const c of gameState.companies) {
+    if (!c.pendingEvents.length) continue;
+    const due = c.pendingEvents.filter(e => e.atTick <= now);
+    if (!due.length) continue;
+    c.pendingEvents = c.pendingEvents.filter(e => e.atTick > now);
+    for (const ev of due) triggerEvent(c, ev);
+  }
+}
+function triggerEvent(c, ev) {
+  const st = gameState;
+  if (ev.kind === 'rumor') {
+    const intel = st.intel.find(i => i.id === ev.intelId);
+    if (ev.dir === 'up' || ev.dir === 'down') {
+      const sign = ev.dir === 'up' ? 1 : -1;
+      applyShock(c, sign * (Number(ev.mag) || 0.08), 0.25, 8);
+      addNews({ headline: fillTpl(pick(sign > 0 ? POS_HEADLINES : NEG_HEADLINES), c), tag: 'BREAKING', ticker: c.ticker, impact: ev.dir });
+    }
+    if (intel) intel.result = intel.claim === ev.dir ? 'hit' : 'miss';
+  } else if (ev.kind === 'campaign') {
+    const sign = ev.dir === 'up' ? 1 : -1;
+    applyShock(c, sign * (Number(ev.mag) || 0.1), 0.4, 10);
+    const hl = sign > 0 ? '[출처 불명] ' + c.name + ' 초대형 수주 임박설 확산 — 매수세 쏠림' : '[출처 불명] ' + c.name + ' 회계 이상설·경영진 이탈설 확산 — 투매 조짐';
+    addNews({ headline: hl, tag: 'NEWS', ticker: c.ticker, impact: ev.dir });
+    if (Math.random() < (Number(ev.detect) || 0)) {
+      const amt = freezeCash(CAMPAIGN.freezeFrac, CAMPAIGN.freezeDays);
+      addHeat(CAMPAIGN.detectHeat);
+      addNews({ headline: 'NCSC, ' + c.ticker + ' 관련 출처 불명 헤드라인 조사 착수 — 연관 자금 ' + fmtCredits(amt) + ' 동결 (D' + st.frozenAssets.releaseDay + ' 해제)', tag: 'SYSTEM', ticker: c.ticker });
+      toast('🚨 캠페인 발각! 현금 ' + fmtCredits(amt) + ' ' + CAMPAIGN.freezeDays + '일 동결 · NCSC Heat +' + CAMPAIGN.detectHeat, 'err', 6000);
+      sfx.alert();
+    }
+  } else {
+    console.warn('[NeonLedger] 알 수 없는 예약 이벤트 무시:', ev);
+  }
+}
+
+function startBreach() {
+  if (!requireRunning() || runtime.minigame) return;
+  const st = gameState;
+  const c = getCompany($('#dwBreachTarget').value);
+  if (!c) return;
+  const left = cooldownLeft('breach');
+  if (left > 0) { toast('Breach 쿨다운 ' + left + 's', 'warn'); return; }
+  if (st.darkwebCredits < BREACH.cost) { toast('Dark Credits 부족 — ' + BREACH.cost + ' DC 필요', 'warn'); return; }
+  st.darkwebCredits -= BREACH.cost;
+  startCooldown('breach', BREACH.cooldown);
+  st.stats.darkOps++;
+  const capM = marketCap(c) / 1e6;
+  const zoneW = clamp(24 - capM * 2.6, 8, 22);   // bigger company → narrower window
+  const zoneL = rand(8, 92 - zoneW);
+  const body = document.createElement('div');
+  body.className = 'breach-screen';
+  body.innerHTML =
+    '<div class="scan"></div>' +
+    '<div class="breach-track"><div class="breach-zone"></div><div class="breach-marker"></div></div>' +
+    '<div class="breach-timer"><i></i></div>' +
+    '<div class="breach-result muted">Space 또는 STOP 버튼으로 커서를 초록 구간에서 멈추세요.</div>';
+  $('.scan', body).textContent =
+    '> TARGET: ' + c.ticker + ' // ' + c.name + '\n' +
+    '> ICE LAYER ' + randInt(2, 5) + ' … handshake jitter ' + randInt(12, 48) + 'ms\n' +
+    '> SYNC WINDOW OPEN — 타이밍을 맞추세요';
+  const zone = $('.breach-zone', body);
+  zone.style.left = zoneL + '%';
+  zone.style.width = zoneW + '%';
+  const handle = showModal({
+    title: 'FIREWALL BREACH // ' + c.ticker,
+    body,
+    buttons: [{ label: '⏹ STOP (Space)', cls: 'btn-magenta', keepOpen: true, onClick: () => stopBreach() }]
+  });
+  runtime.minigame = {
+    ticker: c.ticker, pos: 0, dir: 1, speed: rand(55, 80) + capM * 6, zoneL, zoneW,
+    timeLeft: BREACH.timeMs, total: BREACH.timeMs, done: false, handle,
+    markerEl: $('.breach-marker', body), timerEl: $('.breach-timer i', body), resultEl: $('.breach-result', body)
+  };
+  renderHeader();
+  renderCooldowns();
+  saveGame();
+}
+function updateMinigame(dt) {
+  const mg = runtime.minigame;
+  if (!mg || mg.done) return;
+  mg.pos += mg.dir * mg.speed * dt / 1000;
+  if (mg.pos >= 100) { mg.pos = 200 - mg.pos; mg.dir = -1; }
+  if (mg.pos <= 0) { mg.pos = -mg.pos; mg.dir = 1; }
+  mg.pos = clamp(mg.pos, 0, 100);
+  mg.markerEl.style.left = mg.pos + '%';
+  mg.timeLeft -= dt;
+  mg.timerEl.style.width = clamp(mg.timeLeft / mg.total * 100, 0, 100) + '%';
+  if (mg.timeLeft <= 0) resolveBreach(false, true);
+}
+function stopBreach() {
+  const mg = runtime.minigame;
+  if (!mg || mg.done) return;
+  resolveBreach(mg.pos >= mg.zoneL && mg.pos <= mg.zoneL + mg.zoneW, false);
+}
+function resolveBreach(success, timeout) {
+  const mg = runtime.minigame;
+  mg.done = true;
+  const c = getCompany(mg.ticker);
+  if (success) {
+    const drop = rand(0.06, 0.12);
+    c.pendingJump = (c.pendingJump || 1) * (1 - drop);
+    addHeat(BREACH.heatOk);
+    addNews({ headline: c.name + ' 내부망 장애 발생 — 일부 서비스 일시 중단, 복구 작업 중', tag: 'BREAKING', ticker: c.ticker, impact: 'down' });
+    mg.resultEl.className = 'breach-result up';
+    mg.resultEl.textContent = '✔ ACCESS GRANTED — ' + c.ticker + ' 주가 일시 하락 예정 · NCSC Heat +' + BREACH.heatOk;
+    sfx.success();
+  } else {
+    addHeat(BREACH.heatFail);
+    mg.resultEl.className = 'breach-result down';
+    mg.resultEl.textContent = (timeout ? '✖ TIMEOUT' : '✖ TRACE DETECTED') + ' — 접속 차단 · NCSC Heat +' + BREACH.heatFail;
+    sfx.alert();
+  }
+  // Delay the close button so the Space key-up that stopped the cursor does not also close the result.
+  setTimeout(() => {
+    mg.handle.setButtons([{ label: '닫기 Close', cls: 'btn-primary', onClick: () => { runtime.minigame = null; afterAction(); } }]);
+  }, 400);
+}
+function lobby() {
+  if (!requireRunning()) return;
+  const st = gameState;
+  const left = cooldownLeft('lobby');
+  if (left > 0) { toast('로비 쿨다운 ' + left + 's', 'warn'); return; }
+  if (st.politicalFunds < LOBBY.pf) { toast('정치자금 부족 — ' + LOBBY.pf + ' PF 필요', 'warn'); return; }
+  st.politicalFunds -= LOBBY.pf;
+  startCooldown('lobby', LOBBY.cooldown);
+  const before = st.secHeat;
+  st.secHeat = Math.max(0, st.secHeat - LOBBY.heat);
+  refreshHeatWarnings();
+  sfx.success();
+  toast('🏛️ 로비 완료 — PF −' + LOBBY.pf + ' · NCSC Heat ' + before.toFixed(1) + '% → ' + st.secHeat.toFixed(1) + '%', 'ok');
+  afterAction();
+}
+function renderIntel() {
+  const st = gameState;
+  const body = $('#intelBody');
+  const items = st.intel.slice().reverse();
+  $('#intelEmpty').hidden = items.length > 0;
+  const byId = new Map(items.map(i => [String(i.id), i]));
+  syncRows(body, items.map(i => String(i.id)), () => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td class="mono" data-f="id"></td><td class="mono" data-f="t"></td><td data-f="claim"></td><td class="num" data-f="rel"></td><td class="mono" data-f="day"></td><td class="mono small" data-f="broker"></td><td data-f="res"></td>';
+    return tr;
+  }, (tr, k) => {
+    const i = byId.get(k);
+    setText(fld(tr, 'id'), '#' + i.id);
+    setText(fld(tr, 't'), String(i.ticker));
+    const cl = fld(tr, 'claim');
+    setText(cl, i.claim === 'up' ? '▲ 호재' : '▼ 악재');
+    setTone(cl, i.claim === 'up' ? 1 : -1);
+    setText(fld(tr, 'rel'), i.reliability + '%');
+    setText(fld(tr, 'day'), 'D' + i.day);
+    setText(fld(tr, 'broker'), String(i.broker));
+    const res = fld(tr, 'res');
+    setText(res, i.result === 'hit' ? '✔ 적중' : i.result === 'miss' ? '✖ 빗나감' : '… 대기');
+    setTone(res, i.result === 'hit' ? 1 : i.result === 'miss' ? -1 : 0);
+  });
+}
+function renderDarknet() {
+  if (!gameState) return;
+  const st = gameState;
+  setText($('#dwDC'), fmtNum(st.darkwebCredits, 0) + ' DC');
+  setText($('#dwHeat'), st.secHeat.toFixed(1) + '%');
+  setText($('#dwPF'), fmtNum(st.politicalFunds, 0) + ' PF');
+  setText($('#dcCost'), '(' + fmtCredits(dcPackCost()) + ')');
+  setText($('#pfCost'), '(' + fmtCredits(pfPackCost()) + ')');
+  renderIntel();
+  renderBrokerLog();
+  renderCooldowns();
+}
+function renderCooldowns() {
+  if (!gameState) return;
+  const st = gameState;
+  const running = isRunning();
+  const camp = CAMPAIGN_SCALES[$('#dwCampScale').value] || CAMPAIGN_SCALES.medium;
+  const defs = [
+    ['rumor', '#cdRumor', '#btnRumor', st.darkwebCredits >= RUMOR.cost, 'DC 부족'],
+    ['campaign', '#cdCampaign', '#btnCampaign', st.darkwebCredits >= camp.cost, 'DC 부족'],
+    ['breach', '#cdBreach', '#btnBreach', st.darkwebCredits >= BREACH.cost, 'DC 부족'],
+    ['lobby', '#cdLobby', '#btnLobby', st.politicalFunds >= LOBBY.pf, 'PF 부족']
+  ];
+  for (const [key, cdSel, btnSel, afford, lack] of defs) {
+    const left = cooldownLeft(key);
+    setText($(cdSel), left > 0 ? '⏳ 쿨다운 ' + left + 's' : afford ? '● READY' : '● READY · ' + lack);
+    $(btnSel).disabled = !running || left > 0 || !afford || !!runtime.minigame;
+  }
+}
+
+/* =====================================================================
+ *  [5] M&A LAYER (accumulation with market impact, bonus, takeover)
+ * ===================================================================== */
+function impactBuyCost(c, q) { return q * c.currentPrice * (1 + IMPACT_K * q / (2 * c.sharesOutstanding)); }
+function sharesForBudget(c, invest) {
+  // Solve q·p·(1 + K·q/2S) = invest (numerically stable form).
+  const p = c.currentPrice, a = p * IMPACT_K / (2 * c.sharesOutstanding);
+  if (!(invest > 0)) return 0;
+  return 2 * invest / (p + Math.sqrt(p * p + 4 * a * invest));
+}
+function stakeQuote(c, s, amount) {
+  const S = c.sharesOutstanding, p = c.currentPrice;
+  let q = sharesForBudget(c, Math.max(0, amount) / (1 + STAKE_FEE));
+  const room = Math.max(0, S - s.shares);
+  const capped = q > room;
+  if (capped) q = room;
+  const cost = impactBuyCost(c, q);
+  const fee = cost * STAKE_FEE;
+  return { q, cost, fee, total: cost + fee, avgPrice: q > 0 ? cost / q : p, endPrice: p * (1 + IMPACT_K * q / S), newPct: (s.shares + q) / S * 100, capped };
+}
+function costToTarget(c, s, pct) {
+  const need = pct / 100 * c.sharesOutstanding - s.shares;
+  if (need <= 0) return 0;
+  return Math.ceil(impactBuyCost(c, need) * (1 + STAKE_FEE)) + 1;
+}
+function stakesValue() {
+  let sum = 0;
+  for (const c of gameState.companies) sum += gameState.ownershipStakes[c.ticker].shares * c.currentPrice;
+  return sum;
+}
+function accumulateStake(ticker, amount) {
+  if (!requireRunning()) return;
+  const st = gameState;
+  const c = getCompany(ticker);
+  if (!c) return;
+  const s = st.ownershipStakes[ticker];
+  if (s.acquired) { toast(ticker + '는 이미 인수 완료된 기업입니다.', 'warn'); return; }
+  if (!(amount > 0) || !isFinite(amount)) { toast('매집 금액을 입력하세요.', 'warn'); return; }
+  if (amount > st.cash + 1e-6) { toast('현금 부족 — 가용 현금 ' + fmtCredits(st.cash), 'warn'); return; }
+  const qt = stakeQuote(c, s, amount);
+  if (!(qt.q > 1e-4)) { toast('매집 가능한 주식이 없습니다.', 'warn'); return; }
+  st.cash -= qt.total;
+  s.avgCost = (s.shares * s.avgCost + qt.total) / (s.shares + qt.q);
+  s.shares += qt.q;
+  s.pct = s.shares / c.sharesOutstanding * 100;
+  applyImpact(c, qt.endPrice);
+  st.stats.trades++;
+  sfx.fill();
+  toast('🏢 ' + ticker + ' ' + fmtShares(qt.q) + '주 매집 — 평균 ₵' + fmtPrice(qt.avgPrice) + ' · 지분 ' + s.pct.toFixed(2) + '%', 'ok');
+  for (const lvl of BONUS_LEVELS) {
+    if (s.pct >= lvl - 1e-9 && !s.bonusPaid.includes(lvl)) {
+      const pay = marketCap(c) * BONUS_RATE;
+      s.bonusPaid.push(lvl);
+      st.cash += pay;
+      st.stats.dividends += pay;
+      addNews({ headline: ticker + ' 지분 ' + lvl + '% 돌파 — 보너스 배당 ' + fmtCredits(pay) + ' 수령', tag: 'M&A', ticker, impact: 'up' });
+      toast('💰 ' + ticker + ' ' + lvl + '% 보너스 배당 ' + fmtCredits(pay), 'gold');
+    }
+  }
+  if (s.pct >= TAKEOVER_PCT - 1e-9) completeTakeover(c, s);
+  afterAction();
+}
+function completeTakeover(c, s) {
+  const st = gameState;
+  s.acquired = true;
+  s.acquiredDay = st.day;
+  st.hostileTakeovers.push({ ticker: c.ticker, day: st.day });
+  addNews({ headline: c.name + ', 익명 지하 펀드에 경영권 이전 — 적대적 인수 완료 (' + st.hostileTakeovers.length + '/' + VICTORY_TAKEOVERS + ')', tag: 'M&A', ticker: c.ticker, impact: 'up' });
+  brokerSay(pick(BROKERS), c.ticker + ' 이사회 장악 확인. 이제 네 회사야, Ghost.');
+  toast('👑 ' + c.ticker + ' 적대적 인수 성공! 매일 시총 ' + (DAILY_INCOME_RATE * 100) + '% + PF ' + DAILY_PF, 'gold', 6000);
+  sfx.victory();
+}
+function sellStake(ticker, frac) {
+  if (!requireRunning()) return;
+  const st = gameState;
+  const c = getCompany(ticker);
+  if (!c) return;
+  const s = st.ownershipStakes[ticker];
+  if (s.acquired) { toast('인수 완료된 지분은 매각할 수 없습니다.', 'warn'); return; }
+  if (!(s.shares > 0)) { toast(ticker + ' 보유 지분이 없습니다.', 'warn'); return; }
+  frac = clamp(Number(frac) || 1, 0.01, 1);
+  const q = frac >= 1 ? s.shares : s.shares * frac;
+  const S = c.sharesOutstanding, p = c.currentPrice;
+  const avgPrice = Math.max(0.5, p * (1 - IMPACT_K * q / (2 * S)));
+  const gross = q * avgPrice;
+  const proceeds = gross * (1 - STAKE_FEE);
+  const realized = proceeds - q * s.avgCost;
+  st.cash += proceeds;
+  st.stats.realizedPnl += realized;
+  st.stats.trades++;
+  s.shares -= q;
+  if (frac >= 1 || s.shares < 1e-6) { s.shares = 0; s.avgCost = 0; }
+  s.pct = s.shares / S * 100;
+  applyImpact(c, p * (1 - IMPACT_K * q / S));
+  sfx.fill();
+  toast(ticker + ' 지분 ' + fmtShares(q) + '주 매각 — ' + fmtCredits(proceeds) + ' (실현 ' + fmtSigned(realized) + ')', realized >= 0 ? 'ok' : 'warn');
+  afterAction();
+}
+function setMnaAmount(v) {
+  if (!gameState) return;
+  const c = getCompany(runtime.selected);
+  const s = gameState.ownershipStakes[c.ticker];
+  let amt;
+  if (v === 'max') amt = Math.floor(gameState.cash);
+  else if (v === 'need') amt = s.acquired ? 0 : costToTarget(c, s, TAKEOVER_PCT);
+  else amt = Number(v);
+  if (!isFinite(amt) || amt < 0) amt = 0;
+  $('#mnaAmount').value = String(amt);
+  renderMnaControl();
+}
+function renderMnaControl() {
+  if (!gameState) return;
+  const st = gameState;
+  const c = getCompany(runtime.selected);
+  if (!c) return;
+  const s = st.ownershipStakes[c.ticker];
+  const sel = $('#mnaTicker');
+  if (sel.value !== c.ticker) sel.value = c.ticker;
+  setText($('#mnaPriceCap'), '₵' + fmtPrice(c.currentPrice) + ' / ₵' + fmtCompact(marketCap(c)));
+  setText($('#mnaStake'), s.shares > 0 ? fmtShares(s.shares) + '주 · ' + s.pct.toFixed(2) + '%' + (s.acquired ? ' 👑' : '') : '—');
+  const bar = $('#mnaBar');
+  bar.querySelector('i').style.width = clamp(s.pct, 0, 100).toFixed(2) + '%';
+  bar.classList.toggle('done', s.acquired);
+  const next = BONUS_LEVELS.find(l => !s.bonusPaid.includes(l) && s.pct < l);
+  setText($('#mnaNextBonus'), next ? next + '% 도달 시 ≈ ' + fmtCredits(marketCap(c) * BONUS_RATE) : '모든 보너스 수령 완료');
+  setText($('#mnaNeed'), s.acquired ? '인수 완료 👑' : fmtCredits(costToTarget(c, s, TAKEOVER_PCT)));
+  const amount = Number($('#mnaAmount').value);
+  if (s.acquired) setText($('#mnaExec'), '—');
+  else if (amount > 0 && isFinite(amount)) {
+    const qt = stakeQuote(c, s, amount);
+    setText($('#mnaExec'), 'avg ₵' + fmtPrice(qt.avgPrice) + ' → ₵' + fmtPrice(qt.endPrice) + ' · 지분 ' + qt.newPct.toFixed(2) + '%' + (qt.capped ? ' (한도)' : ''));
+  } else setText($('#mnaExec'), '-');
+  const running = isRunning();
+  $$('[data-action="mna-buy"]').forEach(b => { b.disabled = !running || s.acquired; });
+  $$('[data-action="mna-sell"]').forEach(b => { b.disabled = !running || s.acquired || !(s.shares > 0); });
+}
+function renderMna() {
+  if (!gameState) return;
+  const st = gameState;
+  setText($('#mnaCount'), st.hostileTakeovers.length + ' / ' + VICTORY_TAKEOVERS);
+  renderMnaControl();
+  for (const tr of $('#mnaBody').children) {
+    const c = getCompany(tr.dataset.key);
+    if (!c) continue;
+    const s = st.ownershipStakes[c.ticker];
+    setText(fld(tr, 'price'), fmtPrice(c.currentPrice));
+    setText(fld(tr, 'cap'), '₵' + fmtCompact(marketCap(c)));
+    const bar = fld(tr, 'bar');
+    bar.querySelector('i').style.width = clamp(s.pct, 0, 100).toFixed(2) + '%';
+    bar.classList.toggle('done', s.acquired);
+    setText(fld(tr, 'pct'), s.pct.toFixed(1) + '%');
+    setText(fld(tr, 'value'), s.shares > 0 ? fmtCredits(s.shares * c.currentPrice) : '—');
+    const status = s.acquired ? 'acq' : s.shares > 0 ? 'acc' : 'none';
+    setHtmlOnce(fld(tr, 'status'), status,
+      status === 'acq' ? '<span class="status-pill up">👑 인수 완료</span>' :
+      status === 'acc' ? '<span class="status-pill" style="color:var(--violet)">매집 중</span>' : '<span class="muted">—</span>');
+    tr.classList.toggle('selected', c.ticker === runtime.selected);
+  }
+  const keys = st.hostileTakeovers.map(h => h.ticker);
+  $('#takeoverEmpty').hidden = keys.length > 0;
+  let dailySum = 0;
+  syncRows($('#takeoverBody'), keys, k => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td><span class="mono">' + logoOf(k) + ' <b>' + escapeHtml(k) + '</b></span> <span class="muted small" data-f="name"></span></td><td class="mono" data-f="day"></td><td class="num" data-f="inc"></td><td class="num">+' + DAILY_PF + ' PF</td>';
+    return tr;
+  }, (tr, k) => {
+    const c = getCompany(k);
+    const h = st.hostileTakeovers.find(x => x.ticker === k);
+    const inc = marketCap(c) * DAILY_INCOME_RATE;
+    dailySum += inc;
+    setText(fld(tr, 'name'), c.name);
+    setText(fld(tr, 'day'), 'D' + h.day);
+    setText(fld(tr, 'inc'), fmtCredits(inc));
+  });
+  setText($('#mnaIncome'), keys.length ? '일일 합계 ' + fmtCredits(dailySum) + ' · PF +' + keys.length * DAILY_PF + '/day' : '');
+}
+
+/* =====================================================================
+ *  [6] NCSC HEAT, WARNINGS, GAME OVER / VICTORY
+ *  NCSC = Neo City Securities Commission (fictional regulator).
+ * ===================================================================== */
+function addHeat(x) {
+  const st = gameState;
+  st.secHeat = clamp(st.secHeat + x, 0, 100);
+  refreshHeatWarnings();
+}
+function refreshHeatWarnings() {
+  const heat = gameState.secHeat;
+  const w = runtime.heatWarned;
+  for (const lvl of [75, 90]) {
+    if (heat >= lvl && !w[lvl]) {
+      w[lvl] = true;
+      const msg = lvl === 90
+        ? '🚨 NCSC Heat ' + heat.toFixed(0) + '% — 강제 집행 임박! 100%에서 전 자산 몰수.'
+        : '⚠ NCSC Heat ' + heat.toFixed(0) + '% — 감시 강화 단계. 로비로 Heat를 낮추세요.';
+      toast(msg, lvl === 90 ? 'err' : 'warn', 6000);
+      addNews({ headline: lvl === 90 ? 'NCSC, 익명 지하 펀드 전담 조사팀 구성 — 강제 집행 검토' : 'NCSC, 이상 거래 패턴 모니터링 강화 발표', tag: 'SYSTEM' });
+      sfx.alert();
+    } else if (heat < lvl - 5 && w[lvl]) {
+      w[lvl] = false; // hysteresis: re-arm once Heat drops clearly below the line
+    }
+  }
+}
+function buildFinalReport(status) {
+  const st = gameState;
+  return {
+    status, day: st.day, netWorth: st.netWorth, returnPct: st.netWorth / START_CASH - 1,
+    takeovers: st.hostileTakeovers.map(h => h.ticker), trades: st.stats.trades, liquidations: st.stats.liquidations,
+    darkOps: st.stats.darkOps, realizedPnl: st.stats.realizedPnl, dividends: st.stats.dividends,
+    fixedIncome: st.stats.fixedIncome, heat: st.secHeat
+  };
+}
+function checkEndConditions() {
+  const st = gameState;
+  if (!st || st.gameStatus !== 'running') return;
+  recalcNetWorth();
+  let status = null;
+  if (st.secHeat >= 100) status = 'gameover_seized';
+  else if (st.netWorth < BANKRUPT_LIMIT && Object.keys(st.portfolio).length === 0 && !st.companies.some(c => st.ownershipStakes[c.ticker].shares > 0)) status = 'gameover_bankrupt';
+  else if (!st.victoryAchieved && st.hostileTakeovers.length >= VICTORY_TAKEOVERS) status = 'victory';
+  if (!status) return;
+  st.finalReport = buildFinalReport(status);
+  st.gameStatus = status;
+  if (status === 'victory') {
+    st.victoryAchieved = true;
+    sfx.victory();
+  } else {
+    if (status === 'gameover_seized') {
+      // All assets seized.
+      st.cash = 0;
+      st.portfolio = {};
+      st.frozenAssets = { amount: 0, releaseDay: 0 };
+      for (const c of st.companies) Object.assign(st.ownershipStakes[c.ticker], { shares: 0, pct: 0, avgCost: 0 });
+      recalcNetWorth();
+      addNews({ headline: 'NCSC 강제 집행 — 익명 지하 펀드 전 자산 몰수', tag: 'BREAKING', impact: 'down' });
+    }
+    sfx.liquidation();
+  }
+  saveGame();
+  renderAll();
+  showEndModal();
+}
+function showEndModal() {
+  const st = gameState;
+  if (!st || st.gameStatus === 'running' || runtime.endModal) return;
+  const r = st.finalReport || buildFinalReport(st.gameStatus);
+  const kinds = {
+    gameover_seized: { title: 'ASSETS SEIZED — 전 자산 몰수', cls: 'modal-danger', lead: 'NCSC Heat가 100%에 도달했습니다. NCSC(네오시티 증권감독위원회, 가상 기관)가 Ghost_7의 모든 계좌를 동결·몰수했습니다.' },
+    gameover_bankrupt: { title: 'BANKRUPT — 파산', cls: 'modal-danger', lead: '순자산이 ₵1,000 미만으로 떨어지고 남은 포지션·지분이 없습니다. 지하 펀드는 청산되었습니다.' },
+    victory: { title: 'EMPIRE COMPLETE — 제국 완성', cls: 'modal-gold', lead: '서로 다른 기업 ' + VICTORY_TAKEOVERS + '곳의 적대적 인수를 완성했습니다. 네오시티에 새로운 그림자 권력이 탄생했습니다.' }
+  };
+  const k = kinds[st.gameStatus];
+  const row = (label, val) => '<div class="kv"><span>' + label + '</span><b>' + escapeHtml(val) + '</b></div>';
+  const body =
+    '<p>' + escapeHtml(k.lead) + '</p>' +
+    row('종료 시점', 'Day ' + r.day) +
+    row(st.gameStatus === 'gameover_seized' ? '몰수된 순자산' : '최종 순자산', fmtCredits(r.netWorth) + ' (' + fmtPct(r.returnPct, 1) + ')') +
+    row('인수 기업', r.takeovers.length ? r.takeovers.join(', ') : '없음') +
+    row('체결 / 강제청산', r.trades + ' / ' + r.liquidations) +
+    row('실현손익', fmtSigned(r.realizedPnl)) +
+    row('배당 + 고정수익', fmtCredits(r.dividends + r.fixedIncome)) +
+    row('다크웹 작전', r.darkOps + '회 · 최종 Heat ' + Number(r.heat).toFixed(1) + '%') +
+    '<div class="disclaimer-line">⚠ 이 게임은 완전한 허구이며 실제 금융 자문이 아니고 불법 행위를 조장하지 않습니다.</div>';
+  const newGame = { label: '새 게임 New Game', cls: st.gameStatus === 'victory' ? '' : 'btn-primary', onClick: () => { runtime.endModal = null; startNewGame(); } };
+  const buttons = st.gameStatus === 'victory'
+    ? [{ label: '▶ 샌드박스 계속 Continue', cls: 'btn-primary', onClick: () => { runtime.endModal = null; st.gameStatus = 'running'; saveGame(); renderAll(); toast('샌드박스 모드 — 계속 플레이합니다.', 'gold'); } }, newGame]
+    : [newGame, { label: '기록 보기 (닫기)', onClick: () => { runtime.endModal = null; renderAll(); } }];
+  runtime.endModal = showModal({ title: k.title, body, buttons, cls: k.cls + ' modal-wide' });
+}
+
+/* =====================================================================
+ *  [7] AUDIO (Web Audio API: fill / liquidation / alert / move + extras)
+ * ===================================================================== */
+let audioCtx = null;
+let masterGain = null;
+function ensureAudio() {
+  if (runtime.audioUnavailable) return null;
+  try {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) throw new Error('이 브라우저는 Web Audio API를 지원하지 않습니다');
+      audioCtx = new AC();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0;
+      masterGain.connect(audioCtx.destination);
+      applyVolume();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(e => console.warn('[NeonLedger] AudioContext resume 실패:', e));
+    }
+    return audioCtx;
+  } catch (e) {
+    // Sound is optional: never let it block the game, but tell the player once.
+    runtime.audioUnavailable = true;
+    console.warn('[NeonLedger] 오디오 초기화 실패:', e);
+    toast('효과음을 사용할 수 없습니다: ' + (e && e.message ? e.message : e), 'warn', 5000);
+    return null;
+  }
+}
+function applyVolume() {
+  if (!masterGain || !audioCtx) return;
+  const a = gameState ? gameState.audioSettings : null;
+  const v = a && a.enabled ? clamp(Number(a.masterVolume) || 0, 0, 1) : 0;
+  masterGain.gain.setTargetAtTime(v * 0.6, audioCtx.currentTime, 0.02);
+}
+function toggleSound() {
+  if (!gameState) return;
+  ensureAudio();
+  gameState.audioSettings.enabled = !gameState.audioSettings.enabled;
+  syncAudioUi();
+  applyVolume();
+  saveGame();
+  if (gameState.audioSettings.enabled) sfx.fill();
+}
+function canPlay() {
+  return !!(audioCtx && masterGain && audioCtx.state === 'running' && gameState && gameState.audioSettings.enabled && gameState.audioSettings.masterVolume > 0);
+}
+function tone(freq, dur, { type = 'sine', gain = 0.25, delay = 0, slide = 0 } = {}) {
+  const t0 = audioCtx.currentTime + delay;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t0);
+  if (slide) osc.frequency.exponentialRampToValueAtTime(slide, t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(gain, t0 + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.connect(g);
+  g.connect(masterGain);
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.05);
+}
+function playSfx(name, fn) {
+  if (!canPlay()) return;
+  try { fn(); } catch (e) { console.warn('[NeonLedger] 효과음 재생 실패 (' + name + '):', e); }
+}
+const sfx = {
+  // order filled: bright two-step chirp
+  fill: () => playSfx('fill', () => { tone(880, 0.09, { type: 'triangle', gain: 0.22 }); tone(1320, 0.12, { type: 'triangle', gain: 0.2, delay: 0.07 }); }),
+  // forced liquidation: descending saw + low thud
+  liquidation: () => playSfx('liquidation', () => { tone(420, 0.6, { type: 'sawtooth', gain: 0.22, slide: 70 }); tone(90, 0.35, { type: 'sine', gain: 0.35, delay: 0.05 }); }),
+  // Heat / detection alarm: two square pulses
+  alert: () => playSfx('alert', () => { tone(960, 0.14, { type: 'square', gain: 0.14 }); tone(720, 0.18, { type: 'square', gain: 0.14, delay: 0.18 }); }),
+  // selected ticker moved sharply: soft blip up/down
+  move: up => playSfx('move', () => { tone(up ? 520 : 380, 0.07, { type: 'sine', gain: 0.1, slide: up ? 700 : 280 }); }),
+  success: () => playSfx('success', () => { tone(660, 0.1, { type: 'triangle', gain: 0.2 }); tone(990, 0.16, { type: 'triangle', gain: 0.2, delay: 0.09 }); }),
+  victory: () => playSfx('victory', () => { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.22, { type: 'triangle', gain: 0.2, delay: i * 0.11 })); })
+};
+function playSelectedMoveSfx() {
+  const c = getCompany(runtime.selected);
+  if (!c) return;
+  const k = c.priceHistory[c.priceHistory.length - 1];
+  if (!k || !(k.open > 0)) return;
+  const chg = (k.close - k.open) / k.open;
+  if (Math.abs(chg) < 0.006) return;
+  const now = performance.now();
+  if (now - runtime.lastMoveSfx < 1500) return;
+  runtime.lastMoveSfx = now;
+  sfx.move(chg > 0);
+}
+
+/* =====================================================================
+ *  [8] NEWS FEED, END OF DAY, PORTFOLIO
+ * ===================================================================== */
+function addNews({ headline, tag = 'NEWS', ticker = null, impact = null }) {
+  const st = gameState;
+  if (!st) return;
+  st.newsFeed.push({ id: ++st.newsSeq, day: st.day, tick: st.tickCount, headline: String(headline), tag: NEWS_TAGS.includes(tag) ? tag : 'NEWS', ticker, impact });
+  if (st.newsFeed.length > NEWS_CAP) st.newsFeed.splice(0, st.newsFeed.length - NEWS_CAP);
+  renderNews();
+}
+function newsItemEl(n) {
+  const li = document.createElement('li');
+  if (n.impact === 'up') li.className = 'imp-up'; else if (n.impact === 'down') li.className = 'imp-down';
+  const meta = document.createElement('div');
+  meta.className = 'news-meta';
+  const tag = NEWS_TAGS.includes(n.tag) ? n.tag : 'NEWS';
+  const tagEl = document.createElement('span');
+  tagEl.className = 'ntag ntag-' + tag;
+  tagEl.textContent = tag;
+  const when = document.createElement('span');
+  when.textContent = 'D' + n.day + ' · T' + n.tick;
+  meta.append(tagEl, when);
+  if (n.ticker) { const t = document.createElement('span'); t.textContent = '$' + n.ticker; meta.append(t); }
+  const hl = document.createElement('div');
+  hl.className = 'news-hl';
+  hl.textContent = String(n.headline);
+  li.append(meta, hl);
+  return li;
+}
+function renderNews(full) {
+  if (!gameState) return;
+  const list = $('#newsList');
+  const feed = gameState.newsFeed;
+  if (full) {
+    list.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    for (let i = feed.length - 1; i >= 0; i--) frag.appendChild(newsItemEl(feed[i]));
+    list.appendChild(frag);
+  } else {
+    for (const n of feed) if (n.id > runtime.renderedNewsId) list.insertBefore(newsItemEl(n), list.firstChild);
+    while (list.children.length > NEWS_CAP) list.lastChild.remove();
+  }
+  runtime.renderedNewsId = feed.length ? feed[feed.length - 1].id : 0;
+}
+function generateBackgroundNews() {
+  const st = gameState;
+  const r = Math.random();
+  if (r < 0.06) {
+    const c = pick(st.companies);
+    const sign = Math.random() < 0.5 ? 1 : -1;
+    applyShock(c, sign * rand(0.02, 0.06), 0.3, 8);
+    addNews({ headline: fillTpl(pick(sign > 0 ? POS_HEADLINES : NEG_HEADLINES), c), tag: 'NEWS', ticker: c.ticker, impact: sign > 0 ? 'up' : 'down' });
+  } else if (r < 0.072) {
+    const sector = pick(st.companies).sector;
+    const sign = Math.random() < 0.5 ? 1 : -1;
+    for (const c of st.companies) if (c.sector === sector) c.activeDrifts.push({ perTick: sign * rand(0.0015, 0.003), remaining: 15 });
+    addNews({ headline: fillTpl(pick(sign > 0 ? SECTOR_POS : SECTOR_NEG), null, sector), tag: 'NEWS', impact: sign > 0 ? 'up' : 'down' });
+  } else if (r < 0.084) {
+    addNews({ headline: pick(FLAVOR_NEWS), tag: 'NEWS' });
+  }
+}
+function recalcNetWorth() {
+  const st = gameState;
+  if (!st) return 0;
+  st.netWorth = st.cash + st.frozenAssets.amount + positionsEquity() + stakesValue();
+  return st.netWorth;
+}
+function endOfDay() {
+  const st = gameState;
+  const closedDay = st.day;
+  let income = 0, pf = 0;
+  for (const h of st.hostileTakeovers) {
+    const c = getCompany(h.ticker);
+    if (!c) continue;
+    income += marketCap(c) * DAILY_INCOME_RATE;
+    pf += DAILY_PF;
+  }
+  if (income > 0) {
+    st.cash += income;
+    st.politicalFunds += pf;
+    st.stats.fixedIncome += income;
+    addNews({ headline: '인수 기업 일일 정산 — 고정 수익 ' + fmtCredits(income) + ' · PF +' + pf, tag: 'M&A', impact: 'up' });
+  }
+  st.day++;
+  st.tickCount = 0;
+  for (const c of st.companies) c.dayOpen = c.currentPrice;
+  const fa = st.frozenAssets;
+  if (fa.amount > 0 && st.day >= fa.releaseDay) {
+    st.cash += fa.amount;
+    addNews({ headline: 'NCSC 동결 해제 — ' + fmtCredits(fa.amount) + ' 반환', tag: 'SYSTEM' });
+    toast('🔓 동결 자금 ' + fmtCredits(fa.amount) + ' 해제', 'ok');
+    st.frozenAssets = { amount: 0, releaseDay: 0 };
+  }
+  recalcNetWorth();
+  st.netWorthHistory.push({ day: closedDay, value: Math.round(st.netWorth) });
+  if (st.netWorthHistory.length > NW_HISTORY_CAP) st.netWorthHistory.splice(0, st.netWorthHistory.length - NW_HISTORY_CAP);
+  addNews({ headline: 'Day ' + closedDay + ' 마감 — 순자산 ' + fmtCredits(st.netWorth) + ' · Day ' + st.day + ' 개장', tag: 'SYSTEM' });
+  saveGame();
+}
+function drawNetWorthChart() {
+  if (!gameState) return;
+  const canvas = $('#nwCanvas');
+  if (!canvas.isConnected || canvas.offsetParent === null) return;
+  const cssW = canvas.clientWidth, cssH = canvas.clientHeight;
+  if (cssW < 60 || cssH < 60) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const W = Math.round(cssW * dpr), H = Math.round(cssH * dpr);
+  if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = CC.bg;
+  ctx.fillRect(0, 0, cssW, cssH);
+  const pts = gameState.netWorthHistory.map(p => ({ label: 'D' + p.day, v: p.value })).concat([{ label: 'NOW', v: gameState.netWorth }]);
+  const padL = 8, padR = 64, padT = 14, padB = 20;
+  const plotW = cssW - padL - padR, plotH = cssH - padT - padB;
+  let lo = Math.min(START_CASH, ...pts.map(p => p.v)), hi = Math.max(START_CASH, ...pts.map(p => p.v));
+  const pad = (hi - lo) * 0.1 || hi * 0.05 || 1;
+  lo -= pad; hi += pad;
+  const y = v => padT + (hi - v) / (hi - lo) * plotH;
+  const x = i => padL + (pts.length === 1 ? plotW / 2 : i / (pts.length - 1) * plotW);
+  ctx.font = '10px ' + CC.mono;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  for (let g = 0; g <= 4; g++) {
+    const v = lo + (hi - lo) * g / 4;
+    const yy = Math.round(y(v)) + 0.5;
+    ctx.strokeStyle = CC.grid; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(padL + plotW, yy); ctx.stroke();
+    ctx.fillStyle = CC.text;
+    ctx.fillText('₵' + fmtCompact(v), padL + plotW + 6, yy);
+  }
+  const by = Math.round(y(START_CASH)) + 0.5;
+  ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(247,255,74,.45)';
+  ctx.beginPath(); ctx.moveTo(padL, by); ctx.lineTo(padL + plotW, by); ctx.stroke();
+  ctx.setLineDash([]);
+  const up = gameState.netWorth >= START_CASH;
+  const col = up ? CC.up : CC.down;
+  const grad = ctx.createLinearGradient(0, padT, 0, padT + plotH);
+  grad.addColorStop(0, up ? 'rgba(25,255,156,.28)' : 'rgba(255,59,107,.28)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.beginPath();
+  pts.forEach((p, i) => { if (i === 0) ctx.moveTo(x(i), y(p.v)); else ctx.lineTo(x(i), y(p.v)); });
+  ctx.lineTo(x(pts.length - 1), padT + plotH);
+  ctx.lineTo(x(0), padT + plotH);
+  ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+  ctx.beginPath();
+  pts.forEach((p, i) => { if (i === 0) ctx.moveTo(x(i), y(p.v)); else ctx.lineTo(x(i), y(p.v)); });
+  ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.shadowColor = col; ctx.shadowBlur = 8; ctx.stroke(); ctx.shadowBlur = 0;
+  ctx.fillStyle = col;
+  ctx.beginPath(); ctx.arc(x(pts.length - 1), y(pts[pts.length - 1].v), 3.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = CC.text; ctx.textBaseline = 'top'; ctx.textAlign = 'center';
+  const every = Math.max(1, Math.ceil(pts.length / 7));
+  pts.forEach((p, i) => { if (i % every === 0 || i === pts.length - 1) ctx.fillText(p.label, clamp(x(i), padL + 12, padL + plotW - 12), padT + plotH + 5); });
+}
+function renderPortfolio() {
+  if (!gameState) return;
+  const st = gameState;
+  recalcNetWorth();
+  setText($('#pfCash'), fmtCredits(st.cash));
+  setText($('#pfPos'), fmtCredits(positionsEquity()));
+  setText($('#pfStakes'), fmtCredits(stakesValue()));
+  setText($('#pfFrozen'), st.frozenAssets.amount > 0 ? fmtCredits(st.frozenAssets.amount) + ' (D' + st.frozenAssets.releaseDay + ')' : '₵0');
+  setText($('#pfNet'), fmtCredits(st.netWorth));
+  const ret = st.netWorth / START_CASH - 1;
+  const retEl = $('#pfReturn');
+  setText(retEl, fmtPct(ret));
+  setTone(retEl, ret);
+  renderPositions('#pfPosBody', '#pfPosEmpty');
+  const keys = st.companies.filter(c => st.ownershipStakes[c.ticker].shares > 0).map(c => c.ticker);
+  $('#pfStakeEmpty').hidden = keys.length > 0;
+  syncRows($('#pfStakeBody'), keys, k => {
+    const tr = document.createElement('tr');
+    tr.className = 'clickable';
+    tr.dataset.action = 'select-ticker';
+    tr.dataset.ticker = k;
+    tr.innerHTML = '<td><span class="mono">' + logoOf(k) + ' <b>' + escapeHtml(k) + '</b></span></td><td class="num" data-f="sh"></td><td class="num" data-f="pct"></td><td class="num" data-f="avg"></td><td class="num" data-f="val"></td><td class="num" data-f="pnl"></td><td data-f="st"></td>';
+    return tr;
+  }, (tr, k) => {
+    const c = getCompany(k), s = st.ownershipStakes[k];
+    const val = s.shares * c.currentPrice;
+    const pnl = val - s.shares * s.avgCost;
+    setText(fld(tr, 'sh'), fmtShares(s.shares));
+    setText(fld(tr, 'pct'), s.pct.toFixed(2) + '%');
+    setText(fld(tr, 'avg'), fmtPrice(s.avgCost));
+    setText(fld(tr, 'val'), fmtCredits(val));
+    const pe = fld(tr, 'pnl');
+    setText(pe, fmtSigned(pnl));
+    setTone(pe, pnl);
+    setText(fld(tr, 'st'), s.acquired ? '👑 인수 완료' : '매집 중');
+  });
+  setText($('#stTrades'), fmtNum(st.stats.trades, 0));
+  const rz = $('#stRealized');
+  setText(rz, fmtSigned(st.stats.realizedPnl));
+  setTone(rz, st.stats.realizedPnl);
+  setText($('#stLiq'), fmtNum(st.stats.liquidations, 0));
+  setText($('#stOps'), fmtNum(st.stats.darkOps, 0));
+  setText($('#stDiv'), fmtCredits(st.stats.dividends));
+  setText($('#stDaily'), fmtCredits(st.stats.fixedIncome));
+  drawNetWorthChart();
+}
+
+/* =====================================================================
+ *  GAME TICK & MAIN LOOP (requestAnimationFrame)
+ * ===================================================================== */
+function isRunning() { return !!gameState && gameState.gameStatus === 'running'; }
+function requireRunning() {
+  if (!isRunning()) { toast('게임이 진행 중이 아닙니다.', 'warn'); return false; }
+  return true;
+}
+
+function gameTick() {
+  const st = gameState;
+  st.tickCount++;
+  generateBackgroundNews();
+  processScheduledEvents();
+  for (const c of st.companies) {
+    const k = generateCandle(c);
+    k.day = st.day; k.tick = st.tickCount;
+    pushCandle(c, k);
+  }
+  checkLiquidations();
+  st.secHeat = Math.max(0, st.secHeat - HEAT_DECAY);
+  refreshHeatWarnings();
+  recalcNetWorth();
+  playSelectedMoveSfx();
+  if (st.tickCount >= DAY_TICKS) endOfDay();
+  checkEndConditions();
+  if (st.tickCount % AUTOSAVE_EVERY === 0) saveGame();
+  renderTick();
+}
+
+// A failure inside one frame must not kill the loop silently: log it, pause, and tell the player.
+function handleLoopError(where, e) {
+  console.error('[NeonLedger] ' + where + ' 오류:', e);
+  runtime.acc = 0;
+  if (runtime.speed !== 0) setSpeed(0);
+  const now = performance.now();
+  if (now - (runtime.lastLoopErrorAt || 0) > 5000) {
+    runtime.lastLoopErrorAt = now;
+    toast(where + ' 중 오류가 발생해 일시정지했습니다: ' + (e && e.message ? e.message : e) + ' — P로 재개하거나 새로고침하세요.', 'err', 8000);
+  }
+}
+function frame(ts) {
+  requestAnimationFrame(frame); // re-arm first so an exception below cannot stop the loop
+  if (!runtime.lastFrame) runtime.lastFrame = ts;
+  const dt = Math.max(0, Math.min(ts - runtime.lastFrame, 1000));
+  runtime.lastFrame = ts;
+  if (runtime.started && isRunning() && runtime.speed > 0 && runtime.blocking === 0) {
+    runtime.acc += dt * runtime.speed;
+    let guard = 0;
+    try {
+      while (runtime.acc >= TICK_MS && guard < 8) {
+        runtime.acc -= TICK_MS;
+        guard++;
+        gameTick();
+        if (!isRunning() || runtime.blocking > 0) { runtime.acc = 0; break; }
+      }
+    } catch (e) {
+      handleLoopError('게임 틱 처리', e);
+    }
+  } else {
+    runtime.acc = 0;
+  }
+  if (runtime.minigame && !runtime.minigame.done) {
+    try { updateMinigame(dt); } catch (e) { runtime.minigame.done = true; handleLoopError('Breach 미니게임', e); }
+  }
+  if (runtime.started && ts - runtime.lastUiPulse > 250) {
+    runtime.lastUiPulse = ts;
+    try { renderCooldowns(); } catch (e) { handleLoopError('UI 갱신', e); }
+  }
+}
+
+/* =====================================================================
+ *  TABS, SELECTION, SETTINGS
+ * ===================================================================== */
+const TAB_ORDER = ['market', 'trading', 'darknet', 'mna', 'portfolio', 'info'];
+function switchTab(tab) {
+  if (!TAB_ORDER.includes(tab)) return;
+  runtime.tab = tab;
+  $$('.tab-btn').forEach(b => {
+    const on = b.dataset.tab === tab;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  $$('.tab-panel').forEach(p => { p.hidden = p.id !== 'tab-' + tab; });
+  const slot = $('#tab-' + tab + ' [data-chart-slot]');
+  if (slot) slot.appendChild($('#chartPanel'));
+  if (gameState) { renderActiveTab(); drawChart(); }
+}
+function selectTicker(ticker) {
+  if (!getCompany(ticker)) return;
+  runtime.selected = ticker;
+  runtime.hoverX = null;
+  $$('#marketBody tr').forEach(tr => tr.classList.toggle('selected', tr.dataset.key === ticker));
+  for (const id of ['#orderTicker', '#mnaTicker', '#dwRumorTarget', '#dwCampTarget', '#dwBreachTarget']) {
+    const sel = $(id);
+    if (sel && sel.value !== ticker) sel.value = ticker;
+  }
+  renderChartHeader();
+  drawChart();
+  renderOrderPanel();
+  renderMnaControl();
+}
+function setSpeed(speed) {
+  runtime.speed = speed;
+  $$('.seg button').forEach(b => b.classList.toggle('active', Number(b.dataset.speed) === speed));
+}
+function syncAudioUi() {
+  if (!gameState) return;
+  const a = gameState.audioSettings;
+  $('#btnSound').textContent = a.enabled ? '🔊 SFX' : '🔇 SFX';
+  $('#btnSound').classList.toggle('btn-primary', a.enabled);
+  $('#volSlider').value = String(a.masterVolume);
+}
+
+function renderActiveTab() {
+  switch (runtime.tab) {
+    case 'market': renderMarket(); renderChartHeader(); break;
+    case 'trading': renderOrderPanel(); renderPositions('#tradePosBody', '#tradePosEmpty'); renderChartHeader(); break;
+    case 'darknet': renderDarknet(); break;
+    case 'mna': renderMna(); break;
+    case 'portfolio': renderPortfolio(); break;
+    default: break;
+  }
+}
+function renderTick() {
+  renderHeader();
+  renderNews();
+  renderActiveTab();
+  if (runtime.tab === 'market' || runtime.tab === 'trading') drawChart();
+}
+function renderAll() {
+  renderHeader();
+  renderNews(true);
+  renderBrokerLog(true);
+  renderActiveTab();
+  drawChart();
+}
+
+/* =====================================================================
+ *  EVENT WIRING
+ * ===================================================================== */
+const ACTIONS = {
+  'tab': el => switchTab(el.dataset.tab),
+  'select-ticker': el => selectTicker(el.dataset.ticker),
+  'go-trade': () => switchTab('trading'),
+  'speed': el => setSpeed(Number(el.dataset.speed)),
+  'toggle-sound': () => toggleSound(),
+  'margin-pct': el => setMarginPct(Number(el.dataset.pct)),
+  'open-long': () => openFromTicket('long'),
+  'open-short': () => openFromTicket('short'),
+  'close-pos': el => closePosition(el.dataset.ticker, Number(el.dataset.frac)),
+  'close-selected': el => closePosition(runtime.selected, Number(el.dataset.frac)),
+  'buy-dc': () => buyDarkCredits(),
+  'buy-rumor': () => buyRumor(),
+  'launch-campaign': () => launchCampaign(),
+  'start-breach': () => startBreach(),
+  'breach-stop': () => stopBreach(),
+  'buy-pf': () => buyPoliticalFunds(),
+  'lobby': () => lobby(),
+  'mna-amount': el => setMnaAmount(el.dataset.amount),
+  'mna-buy': () => accumulateStake(runtime.selected, Number($('#mnaAmount').value)),
+  'mna-sell': el => sellStake(runtime.selected, Number(el.dataset.frac)),
+  'save-now': () => { if (saveGame()) toast('저장 완료 — LocalStorage', 'ok'); },
+  'reset-game': () => confirmReset()
+};
+
+function bindEvents() {
+  document.addEventListener('click', e => {
+    const el = e.target.closest('[data-action]');
+    if (!el || el.disabled) return;
+    const fn = ACTIONS[el.dataset.action];
+    if (!fn) return;
+    if (!gameState && el.dataset.action !== 'tab') return;
+    fn(el);
+  });
+  document.addEventListener('dblclick', e => {
+    const tr = e.target.closest('#marketBody tr');
+    if (tr && gameState) { selectTicker(tr.dataset.key); switchTab('trading'); }
+  });
+  // Browser autoplay policy: unlock/resume AudioContext on first user gesture.
+  document.addEventListener('pointerdown', () => ensureAudio(), { passive: true });
+  document.addEventListener('keydown', e => {
+    ensureAudio();
+    // While the Breach modal is open, Space only stops the cursor; it must never activate a focused button.
+    if (runtime.minigame && (e.code === 'Space' || e.key === ' ')) {
+      e.preventDefault();
+      if (!runtime.minigame.done && !e.repeat) stopBreach();
+      return;
+    }
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || runtime.blocking > 0 || !gameState) return;
+    if (e.key >= '1' && e.key <= '6') { switchTab(TAB_ORDER[Number(e.key) - 1]); }
+    else if (e.key === 'p' || e.key === 'P') { setSpeed(runtime.speed === 0 ? 1 : 0); toast(runtime.speed === 0 ? '⏸ 일시정지' : '▶ 재개', 'info', 1500); }
+  });
+  document.addEventListener('keyup', e => {
+    if (runtime.minigame && (e.code === 'Space' || e.key === ' ')) e.preventDefault();
+  });
+  for (const id of ['#orderTicker', '#mnaTicker']) {
+    $(id).addEventListener('change', e => selectTicker(e.target.value));
+  }
+  $('#orderMargin').addEventListener('input', () => renderOrderPanel());
+  $('#orderLev').addEventListener('input', () => renderOrderPanel());
+  $('#mnaAmount').addEventListener('input', () => renderMnaControl());
+  $('#volSlider').addEventListener('input', e => {
+    if (!gameState) return;
+    gameState.audioSettings.masterVolume = clamp(Number(e.target.value), 0, 1);
+    applyVolume();
+  });
+  $('#volSlider').addEventListener('change', () => { if (gameState) { saveGame(); sfx.fill(); } });
+  const canvas = $('#chartCanvas');
+  canvas.addEventListener('mousemove', e => {
+    const r = canvas.getBoundingClientRect();
+    runtime.hoverX = e.clientX - r.left;
+    drawChart();
+  });
+  canvas.addEventListener('mouseleave', () => { runtime.hoverX = null; drawChart(); });
+  let resizeTimer = 0;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { drawChart(); if (runtime.tab === 'portfolio') drawNetWorthChart(); }, 80);
+  });
+  window.addEventListener('beforeunload', () => { if (runtime.started) saveGame(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && runtime.started) saveGame(); });
+}
+
+/* =====================================================================
+ *  BOOT
+ * ===================================================================== */
+function beginGame(state) {
+  gameState = state;
+  indexCompanies();
+  runtime.renderedNewsId = 0;
+  runtime.renderedLogId = 0;
+  runtime.heatWarned = { 75: gameState.secHeat >= 75, 90: gameState.secHeat >= 90 };
+  runtime.prevPrices = new Map(gameState.companies.map(c => [c.ticker, c.currentPrice]));
+  runtime.acc = 0;
+  runtime.endModal = null;
+  runtime.minigame = null;
+  recalcNetWorth();
+  syncAudioUi();
+  applyVolume();
+  setSpeed(1);
+  switchTab('market');
+  selectTicker(gameState.companies.some(c => c.ticker === runtime.selected) ? runtime.selected : 'NYDN');
+  renderAll();
+  runtime.started = true;
+  saveGame();
+  if (gameState.gameStatus !== 'running') showEndModal();
+}
+function startNewGame() {
+  const prevAudio = gameState ? gameState.audioSettings : null;
+  const st = createNewGame(prevAudio);
+  beginGame(st);
+  addNews({ headline: 'Ghost_7 접속 확인 — 지하 펀드 가동. 시드머니 ₵100,000.', tag: 'SYSTEM' });
+  brokerSay('Nyx_Relay', '어서 와, Ghost. 이 도시에선 정보가 곧 화폐야. 필요하면 채널로 불러.');
+  renderAll();
+  saveGame();
+}
+function showStartModal(saved, error) {
+  const hasSave = !!saved;
+  const body =
+    '<p><b>2087년, 네오시티.</b> 메가코프 6곳이 전력망·언론·사법을 장악한 도시. 제도권에서 쫓겨난 트레이더 <b class="mono">Ghost_7</b>은 지하에서 익명 브로커 네트워크와 손잡고 금융 제국을 노린다.</p>' +
+    '<p>📈 캔들 차트를 읽고 Long/Short(1~5x)로 베팅하고, 🕶️ 다크웹 정보와 여론 캠페인으로 판을 흔들고, 🏢 지분 51%를 모아 <b>기업 3곳을 적대적 인수</b>하면 승리. 단, <b style="color:var(--red)">NCSC Heat 100%</b>에 닿으면 전 자산이 몰수된다.</p>' +
+    '<div class="disclaimer-line">⚠ 이 게임은 완전한 허구이며 실제 금융 자문이 아니고 불법 행위를 조장하지 않습니다.</div>' +
+    (hasSave ? '<p class="small muted">저장된 게임: Day ' + saved.day + ' · 순자산 ' + fmtCredits(saved.netWorth) + ' · 인수 ' + saved.hostileTakeovers.length + '곳</p>' : '') +
+    (error ? '<div class="error-line">' + escapeHtml(error) + '</div>' : '') +
+    '<p class="small muted">효과음은 첫 클릭 이후 재생됩니다. 단축키: 1~6 탭 · P 일시정지</p>';
+  const startSafely = (fn, what) => {
+    ensureAudio(); // never throws: audio failures are isolated inside ensureAudio
+    try {
+      fn();
+    } catch (e) {
+      console.error('[NeonLedger] ' + what + ' 실패:', e);
+      runtime.started = false;
+      gameState = null;
+      showStartModal(null, what + ' 실패: ' + (e && e.message ? e.message : e) + ' — 새 게임으로 시작하세요.');
+    }
+  };
+  const buttons = [];
+  if (hasSave) buttons.push({ label: '▶ 이어하기 Continue', cls: 'btn-primary', onClick: () => startSafely(() => beginGame(saved), '저장 게임 불러오기') });
+  buttons.push({
+    label: hasSave ? '새 게임 (저장 덮어쓰기)' : '▶ 새 게임 시작 New Game',
+    cls: hasSave ? 'btn-danger' : 'btn-primary',
+    onClick: () => startSafely(() => startNewGame(), '새 게임 시작')
+  });
+  showModal({ title: 'NEON LEDGER: UNDERGROUND FUND', body, buttons, cls: 'modal-wide' });
+}
+function confirmReset() {
+  showModal({
+    title: '새 게임을 시작할까요?',
+    body: '<p>현재 진행 상황(포트폴리오, 순자산, 지분, 시세 데이터)이 모두 초기화되고 저장 데이터가 덮어써집니다.</p>',
+    cls: 'modal-danger',
+    buttons: [
+      { label: '취소', cls: '' },
+      { label: '초기화하고 새 게임', cls: 'btn-danger', onClick: () => startNewGame() }
+    ]
+  });
+}
+function init() {
+  buildStaticUI();
+  bindEvents();
+  const { state, error } = loadGame();
+  showStartModal(state, error);
+  requestAnimationFrame(frame);
+}
+init();
+</script>
+</body>
+</html>
